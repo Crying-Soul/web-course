@@ -82,7 +82,7 @@ class Game {
         await this.spriteManager.loadTileset('tiles.json');
         
         // Загружаем карту
-        await this.loadMap('map.json');
+        await this.loadMap('map2.json');
         
         console.log('Game: Ресурсы загружены');
     }
@@ -278,7 +278,13 @@ class Game {
                 this.gameManager.resume();
             }
         }
-        
+
+        // Переключение режима отладки
+        if (this.eventManager.isKeyJustReleased('Equal')) {
+            this.gameManager.debug = !this.gameManager.debug;
+            console.log(`Game: Debug mode ${this.gameManager.debug ? 'ON' : 'OFF'}`);
+        }
+
         // Обновляем GameManager (игрока, сущности, физику)
         this.gameManager.update(dt, this);
         

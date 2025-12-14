@@ -168,5 +168,47 @@ class Inventory {
             ctx.textAlign = 'left';
             ctx.fillText((i + 1).toString(), x + 2, y + 10);
         }
+
+        // Панель характеристик выбранного заклинания
+        const selected = this.getSelectedItem();
+        const panelX = startX + slotSize + 14;
+        const panelY = startY;
+        const panelW = 180;
+        const panelH = 82;
+
+        ctx.fillStyle = 'rgba(10, 12, 24, 0.75)';
+        ctx.fillRect(panelX, panelY, panelW, panelH);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+        ctx.fillStyle = '#e8f0ff';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'left';
+
+        if (selected) {
+            const styleLabel = selected.castStyle === 'beam' ? 'Луч'
+                : selected.castStyle === 'zone' ? 'Нова'
+                : selected.castStyle === 'spray' ? 'Веер'
+                : 'Снаряд';
+
+            ctx.fillText(`${selected.name} (${styleLabel})`, panelX + 8, panelY + 16);
+            ctx.fillStyle = '#9fb2d6';
+            ctx.font = '11px Arial';
+            ctx.fillText(`Стихия: ${selected.element}`, panelX + 8, panelY + 32);
+            ctx.fillText(`Урон: ${selected.damage}`, panelX + 8, panelY + 46);
+            ctx.fillText(`Мана: ${selected.manaCost} | КД: ${selected.cooldown}s`, panelX + 8, panelY + 60);
+            if (selected.spread) {
+                ctx.fillText(`Веер: ${selected.projectileCount} / ${selected.spread}°`, panelX + 8, panelY + 74);
+            } else if (selected.castStyle === 'beam') {
+                ctx.fillText(`Длина луча: ${selected.beamLength}`, panelX + 8, panelY + 74);
+            } else if (selected.castStyle === 'zone') {
+                ctx.fillText(`Радиус: ${selected.zoneRadius} | тик: ${selected.zoneTickDamage}`, panelX + 8, panelY + 74);
+            }
+        } else {
+            ctx.fillStyle = '#9fb2d6';
+            ctx.font = '11px Arial';
+            ctx.fillText('Пустой слот — подберите заклинание', panelX + 8, panelY + 32);
+        }
     }
 }

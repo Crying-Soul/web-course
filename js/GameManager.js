@@ -46,6 +46,17 @@ class GameManager {
 
         // Режим отладки (по умолчанию включен для тестирования)
         this.debug = true;
+
+        // Система очков
+        this.scoreMultiplier = 1.0;
+        this.scoreDecayTimer = 0;
+        this.scoreDecayInterval = 5; // каждые 5 секунд терять очки
+        this.scoreLossAmount = 1; // терять 1 очко
+
+        // Игрок и результаты
+        this.playerName = 'Игрок';
+        this.onGameOver = null;
+        this.scoreManager = null;
     }
 
     /**
@@ -178,7 +189,11 @@ class GameManager {
         await this.player.loadSprite();
         this.player.gameManager = this;
 
-        console.log(`GameManager: Игрок создан на позиции (${x}, ${y})`);
+        // Добавляем стартовое заклинание
+        const startingSpell = new Item(ItemTypes.ARCANE_BOLT);
+        this.player.inventory.addItem(startingSpell);
+
+        console.log(`GameManager: Игрок создан на позиции (${x}, ${y}) с базовым заклинанием`);
         return this.player;
     }
 
@@ -191,13 +206,11 @@ class GameManager {
             throw new Error('GameManager: MapManager не готов');
         }
 
-        const mapSize = this.mapManager.getPixelSize();
-        const centerX = mapSize.width / 2;
+        // Фиксированные координаты спавна для тестирования
+        const spawnX = 163*16;
+        const spawnY = 50*16;
 
-        // Ищем позицию земли в центре карты
-        const spawnY = this.findGroundLevel(centerX);
-
-        return await this.createPlayer(centerX - 18, spawnY - 52); // Смещаем с учётом размера игрока
+        return await this.createPlayer(spawnX, spawnY);
     }
 
     /**
@@ -279,7 +292,7 @@ class GameManager {
      */
     async giveStarterSpells() {
         if (!this.player) return;
-        const starterSpells = ['arcane_bolt', 'frost_lance', 'solar_orb'];
+        const starterSpells = ['arcane_bolt', 'arcane_beam', 'frost_nova', 'thorn_burst'];
         for (const spellId of starterSpells) {
             const spell = createItem(spellId);
             await spell.loadImage();
@@ -348,10 +361,10 @@ class GameManager {
             enemy.spawner.onEnemyDied();
         }
 
-        // Очки за убийство (базовые + бонус за стрик)
+        // Очки за убийство (базовые + бонус за стрик + коэффициент)
         const baseScore = enemy.scoreValue || 10;
         const streakBonus = Math.floor(this.stats.killStreak * 0.5);
-        const totalScore = baseScore + streakBonus;
+        const totalScore = Math.floor((baseScore + streakBonus) * this.scoreMultiplier);
         this.stats.score += totalScore;
 
         // Kill streak система
@@ -411,6 +424,9 @@ class GameManager {
 
         // Обновляем kill streak таймер
         this.updateKillStreak(dt);
+
+        // Обновляем систему очков
+        this.updateScoreSystem(dt);
 
         // Обновляем спавнеры
         this.spawnerManager.update(dt, this);
@@ -472,11 +488,6 @@ class GameManager {
         this.items = this.items.filter(item => item.active);
         this.projectiles = this.projectiles.filter(p => p.active);
 
-        // Переключение режима отладки
-        if (this.eventManager && this.eventManager.isKeyJustPressed('F3')) {
-            this.debug = !this.debug;
-            console.log(`GameManager: Debug mode ${this.debug ? 'ON' : 'OFF'}`);
-        }
     }
 
     /**
@@ -492,6 +503,26 @@ class GameManager {
                     console.log(`Kill Streak ended: ${this.stats.killStreak} kills!`);
                 }
                 this.stats.killStreak = 0;
+            }
+        }
+    }
+
+    /**
+     * Обновляет систему очков: уменьшает коэффициент и теряет очки со временем
+     * @param {number} dt
+     */
+    updateScoreSystem(dt) {
+        // Уменьшаем коэффициент очков со временем (медленно)
+        this.scoreMultiplier = Math.max(0.1, this.scoreMultiplier - dt * 0.001); // уменьшается на 0.001 в секунду
+
+        // Таймер потери очков
+        this.scoreDecayTimer += dt;
+        if (this.scoreDecayTimer >= this.scoreDecayInterval) {
+            this.scoreDecayTimer = 0;
+            // Теряем очки
+            if (this.stats.score > 0) {
+                this.stats.score = Math.max(0, this.stats.score - this.scoreLossAmount);
+                console.log(`Score decayed: -${this.scoreLossAmount}, total: ${this.stats.score}`);
             }
         }
     }
@@ -708,7 +739,33 @@ class GameManager {
      * Конец игры
      */
     gameOver() {
+        if (this.state === 'gameover') return;
         this.state = 'gameover';
+        if (this.player) {
+            this.player.active = false;
+        }
+
+        const results = this.getResults();
+        if (this.scoreManager) {
+            this.scoreManager.addResult(results);
+        }
+        if (typeof this.onGameOver === 'function') {
+            this.onGameOver(results);
+        }
+
         console.log('GameManager: Game Over');
+    }
+
+    /**
+     * Возвращает итоговые результаты забега
+     * @returns {{name: string, score: number, kills: number, time: number}}
+     */
+    getResults() {
+        return {
+            name: this.playerName || 'Игрок',
+            score: this.stats.score,
+            kills: this.stats.kills,
+            time: Math.floor(this.stats.time)
+        };
     }
 }

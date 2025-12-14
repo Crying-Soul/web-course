@@ -381,6 +381,11 @@ class Player extends Entity {
         if (eventManager.mouse.leftButton || eventManager.isKeyJustPressed('KeyE')) {
             this.tryCastSpell(game);
         }
+
+        // Выкинуть выбранное заклинание
+        if (eventManager.isKeyJustPressed('KeyQ')) {
+            this.dropSelectedSpell(game);
+        }
         
         // Переключение слотов инвентаря (1-6)
         for (let i = 1; i <= 6; i++) {
@@ -391,6 +396,23 @@ class Player extends Entity {
         
         // Колёсико мыши для переключения слотов
         // (реализуется через EventManager если нужно)
+    }
+
+    /**
+     * Выбрасывает выбранное заклинание на землю
+     */
+    dropSelectedSpell(game) {
+        const item = this.inventory.getSelectedItem();
+        if (!item || item.type !== 'spell') return;
+        const removed = this.inventory.removeItem(this.inventory.selectedSlot);
+        if (!removed || !game || !game.gameManager) return;
+        const spawnX = this.x + this.displayWidth / 2 + this.direction * 12;
+        const spawnY = this.y + this.displayHeight / 2;
+        game.gameManager.spawnItem(removed.id, spawnX, spawnY, {
+            velocityX: this.direction * 120,
+            velocityY: -120,
+            drop: true
+        });
     }
     
     /**
@@ -435,6 +457,81 @@ class Player extends Entity {
         const dirX = targetX - centerX;
         const dirY = targetY - centerY;
 
+        const castStyle = spell.castStyle || 'projectile';
+
+        // Направление персонажа смотрит туда же
+        this.direction = dirX >= 0 ? 1 : -1;
+
+        if (!game || !game.gameManager) return;
+
+        if (castStyle === 'beam') {
+            const beam = new MagicBeam({
+                x: centerX,
+                y: centerY,
+                targetX,
+                targetY,
+                length: spell.beamLength || 360,
+                width: spell.beamWidth || 14,
+                duration: spell.beamDuration || 0.25,
+                damage: spell.damage * this.getDamageMultiplier(),
+                element: spell.element,
+                owner: this,
+                game
+            });
+            game.gameManager.addProjectile(beam);
+            return;
+        }
+
+        if (castStyle === 'zone') {
+            const zone = new MagicZone({
+                x: centerX,
+                y: centerY,
+                radius: spell.zoneRadius || 90,
+                duration: spell.zoneDuration || 1.0,
+                tickDamage: spell.zoneTickDamage || Math.max(6, spell.damage * 0.35 * this.getDamageMultiplier()),
+                tickRate: spell.zoneTickRate || 0.25,
+                element: spell.element,
+                slowAmount: spell.slow || 0,
+                owner: this,
+                game
+            });
+            game.gameManager.addProjectile(zone);
+            return;
+        }
+
+        if (castStyle === 'spray') {
+            const count = spell.projectileCount || 3;
+            const spreadRad = (spell.spread || 30) * Math.PI / 180;
+            for (let i = 0; i < count; i++) {
+                const t = count === 1 ? 0 : (i / (count - 1) - 0.5);
+                const angle = Math.atan2(dirY, dirX) + spreadRad * t;
+                const px = Math.cos(angle);
+                const py = Math.sin(angle);
+                const projectile = new MagicProjectile({
+                    x: centerX,
+                    y: centerY,
+                    dirX: px,
+                    dirY: py,
+                    speed: spell.projectileSpeed * this.getProjectileSpeedMultiplier(),
+                    damage: spell.damage * this.getDamageMultiplier(),
+                    radius: spell.projectileRadius,
+                    lifeTime: spell.projectileLife,
+                    trailColors: spell.trailColors,
+                    pierce: spell.pierce,
+                    explosionRadius: spell.explosionRadius,
+                    element: spell.element,
+                    slowAmount: spell.slow,
+                    owner: this,
+                    onKillMana: spell.onKillMana,
+                    spellId: spell.id,
+                    game
+                });
+                game.gameManager.addProjectile(projectile);
+            }
+            return;
+        }
+
+        // Обычный снаряд
         const projectile = new MagicProjectile({
             x: centerX,
             y: centerY,
@@ -454,13 +551,7 @@ class Player extends Entity {
             spellId: spell.id,
             game
         });
-
-        // Направление персонажа смотрит туда же
-        this.direction = dirX >= 0 ? 1 : -1;
-
-        if (game && game.gameManager) {
-            game.gameManager.addProjectile(projectile);
-        }
+        game.gameManager.addProjectile(projectile);
     }
 
     /**
@@ -627,7 +718,10 @@ class Player extends Entity {
      */
     die() {
         console.log('Player: Игрок погиб!');
-        // В будущем - респаун, game over экран и т.д.
+        this.active = false;
+        if (this.gameManager && typeof this.gameManager.gameOver === 'function') {
+            this.gameManager.gameOver();
+        }
     }
     
     /**

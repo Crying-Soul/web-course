@@ -45,6 +45,127 @@
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
             animation: pulse 1.5s ease-in-out infinite;
         }
+
+        #ui-layer {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .card {
+            min-width: 360px;
+            max-width: 440px;
+            padding: 18px 20px;
+            border-radius: 12px;
+            background: rgba(10, 12, 24, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #e8f0ff;
+            pointer-events: auto;
+        }
+
+        .hidden { display: none; }
+
+        .card h1 {
+            font-size: 22px;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .card label {
+            font-size: 13px;
+            color: #a7b8d8;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .card input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.04);
+            color: #e8f0ff;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .card input[type="text"]:focus {
+            border-color: #56c2ff;
+            box-shadow: 0 0 0 2px rgba(86, 194, 255, 0.25);
+        }
+
+        .card button {
+            margin-top: 14px;
+            width: 100%;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #4bc8ff, #7c6bff);
+            color: #0a0a15;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        .card button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(75, 200, 255, 0.25);
+        }
+
+        .card button:active { transform: translateY(0); }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .meta {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            text-align: center;
+        }
+
+        .meta strong { display: block; font-size: 16px; }
+        .meta span { color: #a7b8d8; font-size: 12px; }
+
+        #leaderboard {
+            margin-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 12px;
+        }
+
+        #leaderboard h2 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        #leaderboard ul {
+            list-style: none;
+        }
+
+        #leaderboard li {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            color: #cfd9f5;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+            font-size: 13px;
+        }
+
+        #leaderboard li strong { color: #ffffff; }
+
+        #tips { color: #94a4c2; font-size: 12px; margin-top: 8px; line-height: 1.4; }
         
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -65,6 +186,30 @@
     <div id="game-container">
         <canvas id="game-canvas"></canvas>
         <div id="loading">Загрузка...</div>
+        <div id="ui-layer">
+            <div id="start-card" class="card">
+                <h1>Terraria Arena Survival</h1>
+                <label for="player-name">Имя игрока</label>
+                <input id="player-name" type="text" maxlength="18" placeholder="Например, Hero" autocomplete="off" />
+                <div id="tips">Перед стартом проверьте управление: A/D — ходьба, W/Space — прыжок, ЛКМ/E — каст, 1-6 — выбор заклинания, Q — выкинуть заклинание.</div>
+                <button id="start-btn">Начать игру</button>
+                <div id="leaderboard-preview" class="meta-row"></div>
+            </div>
+
+            <div id="gameover-card" class="card hidden">
+                <h1>Игра окончена</h1>
+                <div class="meta-row">
+                    <div class="meta"><strong id="res-score">0</strong><span>Очки</span></div>
+                    <div class="meta"><strong id="res-kills">0</strong><span>Убийства</span></div>
+                    <div class="meta"><strong id="res-time">0:00</strong><span>Время</span></div>
+                </div>
+                <div id="leaderboard">
+                    <h2>Таблица лидеров</h2>
+                    <ul id="leaderboard-list"></ul>
+                </div>
+                <button id="restart-btn">Сыграть ещё</button>
+            </div>
+        </div>
     </div>
     <!-- Менеджеры -->
     <script src="js/EventManager.js"></script>
@@ -72,6 +217,7 @@
     <script src="js/MapManager.js"></script>
     <script src="js/PhysicsManager.js"></script>
     <script src="js/GameManager.js"></script>
+    <script src="js/ScoreManager.js"></script>
     
     <!-- Предметы и инвентарь -->
     <script src="js/Item.js"></script>

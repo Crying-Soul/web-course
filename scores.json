@@ -1,0 +1,5 @@
+[
+  { "name": "Hero", "score": 320, "kills": 18, "time": 175 },
+  { "name": "Mage", "score": 260, "kills": 14, "time": 190 },
+  { "name": "Ranger", "score": 210, "kills": 11, "time": 205 }
+]

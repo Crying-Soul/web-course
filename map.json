@@ -255,7 +255,7 @@
                  "type":"z1",
                  "visible":true,
                  "width":0,
-                 "x":497.333333333333,
+                 "x":502,
                  "y":1220
                 }, 
                 {
@@ -266,7 +266,7 @@
                  "type":"z2",
                  "visible":true,
                  "width":0,
-                 "x":536,
+                 "x":543,
                  "y":1220
                 }, 
                 {
@@ -277,7 +277,7 @@
                  "type":"z3",
                  "visible":true,
                  "width":0,
-                 "x":576.666666666667,
+                 "x":581,
                  "y":1220
                 }, 
                 {
@@ -288,7 +288,7 @@
                  "type":"z2",
                  "visible":true,
                  "width":0,
-                 "x":619.333333333333,
+                 "x":620,
                  "y":1220
                 }, 
                 {
@@ -299,7 +299,7 @@
                  "type":"g1",
                  "visible":true,
                  "width":0,
-                 "x":670,
+                 "x":660,
                  "y":1220
                 }, 
                 {
@@ -369,16 +369,36 @@
          "name":"Teleport",
          "objects":[
                 {
-                 "gid":157,
-                 "height":34,
-                 "id":24,
+                 "height":43,
+                 "id":29,
                  "name":"",
+                 "properties":[
+                        {
+                         "name":"requires_interaction",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"target_map",
+                         "type":"string",
+                         "value":"map2.json"
+                        }, 
+                        {
+                         "name":"target_x",
+                         "type":"int",
+                         "value":100
+                        }, 
+                        {
+                         "name":"target_y",
+                         "type":"int",
+                         "value":100
+                        }],
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":34,
-                 "x":1160.33333333333,
-                 "y":1194.33333333333
+                 "width":40.5,
+                 "x":1153.5,
+                 "y":1124
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -498,7 +518,7 @@
          "y":0
         }],
  "nextlayerid":6,
- "nextobjectid":28,
+ "nextobjectid":31,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

@@ -297,7 +297,15 @@ class TeleportManager {
         if (!properties) return result;
         
         for (const prop of properties) {
-            result[prop.name] = prop.value;
+            // Поддержка как camelCase, так и snake_case
+            let name = prop.name;
+            if (name === 'target_map') name = 'targetMap';
+            if (name === 'target_x') name = 'targetX';
+            if (name === 'target_y') name = 'targetY';
+            if (name === 'target_teleport_id') name = 'targetTeleportId';
+            if (name === 'requires_interaction') name = 'requiresInteraction';
+            
+            result[name] = prop.value;
         }
         return result;
     }

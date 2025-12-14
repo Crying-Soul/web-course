@@ -8,7 +8,7 @@
  "margin":0,
  "name":"tiles",
  "spacing":0,
- "tilecount":156,
+ "tilecount":157,
  "tiledversion":"1.11.2",
  "tileheight":34,
  "tiles":[
@@ -947,6 +947,12 @@
          "image":"images\/base\/Item_3985.png",
          "imageheight":34,
          "imagewidth":34
+        }, 
+        {
+         "id":157,
+         "image":"images\/base\/Gore_387.png",
+         "imageheight":28,
+         "imagewidth":20
         }],
  "tilewidth":34,
  "type":"tileset",

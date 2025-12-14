@@ -51,6 +51,22 @@ class Item {
         this.slow = config.slow || 0; // замедление цели (0-1)
         this.element = config.element || 'arcane';
         this.onKillMana = config.onKillMana || 0; // моментальный бонус маны за килл этой школой
+
+        // Расширенные стили каста
+        this.castStyle = config.castStyle || 'projectile'; // projectile | beam | zone | spray
+        this.projectileCount = config.projectileCount || 1;
+        this.spread = config.spread || 0; // в градусах для веера
+
+        // Зоны/новы
+        this.zoneRadius = config.zoneRadius || 0;
+        this.zoneDuration = config.zoneDuration || 0;
+        this.zoneTickDamage = config.zoneTickDamage || 0;
+        this.zoneTickRate = config.zoneTickRate || 0.25;
+
+        // Лучи
+        this.beamLength = config.beamLength || 0;
+        this.beamWidth = config.beamWidth || 0;
+        this.beamDuration = config.beamDuration || 0;
         
         // Активен ли предмет (лежит на земле)
         this.active = true;
@@ -193,6 +209,16 @@ class Item {
             slow: this.slow,
             element: this.element,
             onKillMana: this.onKillMana,
+            castStyle: this.castStyle,
+            projectileCount: this.projectileCount,
+            spread: this.spread,
+            zoneRadius: this.zoneRadius,
+            zoneDuration: this.zoneDuration,
+            zoneTickDamage: this.zoneTickDamage,
+            zoneTickRate: this.zoneTickRate,
+            beamLength: this.beamLength,
+            beamWidth: this.beamWidth,
+            beamDuration: this.beamDuration,
             displayWidth: this.width,
             displayHeight: this.height,
             smooth: this.smooth,
@@ -487,6 +513,63 @@ const ItemTypes = {
         element: 'earth',
         rarity: 'rare',
         dropWeight: 8
+    },
+
+    // === НОВЫЕ ФОРМЫ КАСТА ===
+    ARCANE_BEAM: {
+        id: 'arcane_beam',
+        name: 'Аркановый луч',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#a2f0ff',
+        damage: 32,
+        manaCost: 16,
+        cooldown: 0.7,
+        castStyle: 'beam',
+        beamLength: 420,
+        beamWidth: 18,
+        beamDuration: 0.25,
+        element: 'arcane',
+        rarity: 'uncommon',
+        dropWeight: 18
+    },
+    FROST_NOVA: {
+        id: 'frost_nova',
+        name: 'Ледяная нова',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#c2f6ff',
+        damage: 0,
+        manaCost: 18,
+        cooldown: 1.2,
+        castStyle: 'zone',
+        zoneRadius: 110,
+        zoneDuration: 1.2,
+        zoneTickDamage: 12,
+        zoneTickRate: 0.2,
+        slow: 0.4,
+        element: 'frost',
+        rarity: 'rare',
+        dropWeight: 10
+    },
+    THORN_BURST: {
+        id: 'thorn_burst',
+        name: 'Шиповой веер',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#7fb25c',
+        damage: 18,
+        manaCost: 10,
+        cooldown: 0.6,
+        castStyle: 'spray',
+        projectileCount: 7,
+        spread: 60,
+        projectileSpeed: 380,
+        projectileRadius: 6,
+        projectileLife: 1.6,
+        element: 'earth',
+        rarity: 'uncommon',
+        dropWeight: 16
     }
 };
 

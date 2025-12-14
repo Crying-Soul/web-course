@@ -161,3 +161,165 @@ class MagicProjectile {
         ctx.fill();
     }
 }
+
+/**
+ * MagicBeam - мгновенный луч, который пробивает линию
+ */
+class MagicBeam {
+    constructor(options = {}) {
+        this.x = options.x || 0;
+        this.y = options.y || 0;
+        const tx = options.targetX || this.x + 1;
+        const ty = options.targetY || this.y;
+        const dx = tx - this.x;
+        const dy = ty - this.y;
+        const len = Math.max(Math.hypot(dx, dy), 0.0001);
+        this.dirX = dx / len;
+        this.dirY = dy / len;
+
+        this.length = options.length || 300;
+        this.width = options.width || 14;
+        this.damage = options.damage || 20;
+        this.element = options.element || 'arcane';
+        this.duration = options.duration || 0.25;
+        this.age = 0;
+        this.owner = options.owner || null;
+        this.game = options.game || null;
+        this.active = true;
+        this.hitSet = new Set();
+    }
+
+    update(dt, game) {
+        if (!this.active) return;
+        this.age += dt;
+        const g = this.game || game;
+        if (g) this.applyHits(g);
+        if (this.age >= this.duration) {
+            this.active = false;
+        }
+    }
+
+    applyHits(game) {
+        const entities = game.gameManager?.entities || [];
+        const sx = this.x;
+        const sy = this.y;
+        const ex = sx + this.dirX * this.length;
+        const ey = sy + this.dirY * this.length;
+
+        for (const enemy of entities) {
+            if (!(enemy instanceof Enemy) || !enemy.active) continue;
+            if (this.hitSet.has(enemy)) continue;
+
+            const exCenter = enemy.x + enemy.displayWidth / 2;
+            const eyCenter = enemy.y + enemy.displayHeight / 2;
+            const dist = this.pointToSegmentDistance(exCenter, eyCenter, sx, sy, ex, ey);
+            if (dist <= this.width) {
+                this.hitSet.add(enemy);
+                enemy.takeDamage(this.damage, this.owner, { spellId: 'beam', element: this.element });
+            }
+        }
+    }
+
+    pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lengthSq = dx * dx + dy * dy;
+        let t = ((px - x1) * dx + (py - y1) * dy) / lengthSq;
+        t = Math.max(0, Math.min(1, t));
+        const projX = x1 + t * dx;
+        const projY = y1 + t * dy;
+        const ddx = px - projX;
+        const ddy = py - projY;
+        return Math.hypot(ddx, ddy);
+    }
+
+    render(ctx, camera) {
+        if (!this.active) return;
+        const sx = this.x - camera.x;
+        const sy = this.y - camera.y;
+        const ex = sx + this.dirX * this.length;
+        const ey = sy + this.dirY * this.length;
+
+        ctx.save();
+        const grad = ctx.createLinearGradient(sx, sy, ex, ey);
+        grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+        grad.addColorStop(0.4, 'rgba(162,240,255,0.8)');
+        grad.addColorStop(1, 'rgba(124,107,255,0.6)');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = this.width;
+        ctx.globalAlpha = 0.85;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+/**
+ * MagicZone - стационарная зона урона/замедления
+ */
+class MagicZone {
+    constructor(options = {}) {
+        this.x = options.x || 0;
+        this.y = options.y || 0;
+        this.radius = options.radius || 80;
+        this.duration = options.duration || 1.2;
+        this.tickDamage = options.tickDamage || 8;
+        this.tickRate = options.tickRate || 0.3;
+        this.element = options.element || 'frost';
+        this.slowAmount = options.slowAmount || 0;
+        this.owner = options.owner || null;
+        this.game = options.game || null;
+        this.age = 0;
+        this.tickTimer = 0;
+        this.active = true;
+    }
+
+    update(dt, game) {
+        if (!this.active) return;
+        this.age += dt;
+        this.tickTimer -= dt;
+        const g = this.game || game;
+
+        if (this.tickTimer <= 0 && g) {
+            this.applyTick(g);
+            this.tickTimer = this.tickRate;
+        }
+
+        if (this.age >= this.duration) {
+            this.active = false;
+        }
+    }
+
+    applyTick(game) {
+        const enemies = game.gameManager?.entities || [];
+        for (const enemy of enemies) {
+            if (!(enemy instanceof Enemy) || !enemy.active) continue;
+            const dx = enemy.x + enemy.displayWidth / 2 - this.x;
+            const dy = enemy.y + enemy.displayHeight / 2 - this.y;
+            if (Math.hypot(dx, dy) <= this.radius) {
+                enemy.takeDamage(this.tickDamage, this.owner, { spellId: 'zone', element: this.element });
+                if (this.slowAmount > 0 && enemy.applySlow) {
+                    enemy.applySlow(this.slowAmount, 1.0);
+                }
+            }
+        }
+    }
+
+    render(ctx, camera) {
+        if (!this.active) return;
+        const sx = this.x - camera.x;
+        const sy = this.y - camera.y;
+        ctx.save();
+        const grd = ctx.createRadialGradient(sx, sy, this.radius * 0.2, sx, sy, this.radius);
+        grd.addColorStop(0, 'rgba(194, 246, 255, 0.35)');
+        grd.addColorStop(1, 'rgba(107, 170, 255, 0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(sx, sy, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}

@@ -252,6 +252,12 @@ class Enemy extends Entity {
         this.attackTimer = 0;
         this.isAttacking = false;
 
+        // Лёгкий патруль, чтобы враги всегда двигались
+        this.wanderDirection = Math.random() < 0.5 ? -1 : 1;
+        this.wanderTimer = 0;
+        this.wanderSwitchTime = 1.2 + Math.random();
+        this.wanderSpeedFactor = 0.4;
+
         // Эффект урона
         this.damageFlashTimer = 0;
         this.damageFlashDuration = 0.15;
@@ -312,9 +318,7 @@ class Enemy extends Entity {
      */
     updateAI(dt, game) {
         if (!this.target || !this.target.active) {
-            this.aiState = 'idle';
-            this.velocityX = 0;
-            this.setAnimation('idle');
+            this.runWander(dt);
             return;
         }
 
@@ -326,26 +330,29 @@ class Enemy extends Entity {
         // Определяем направление к цели
         this.direction = dx > 0 ? 1 : -1;
 
-        // Проверка анимации атаки
+        // Проверка анимации атаки — легкое движение к цели, не стоим на месте
         if (this.isAttacking) {
             const anim = this.spriteConfig.animations['attack'];
             if (this.animationFrame >= anim.frames.length - 1) {
                 this.isAttacking = false;
             }
-            this.velocityX = 0;
+            this.velocityX = this.direction * this.moveSpeed * 0.25 * this.slowFactor;
+            this.setAnimation('attack');
             return;
         }
 
         // Логика ИИ
-        if (distance <= this.attackRange) {
-            // Атака
+        if (distance <= this.attackRange + 4) {
+            // Атака или агрессивное давление во время кулдауна
             this.aiState = 'attack';
-            this.velocityX = 0;
 
             if (this.attackTimer <= 0) {
                 this.performAttack(game);
+            } else {
+                // Продолжаем поддавливать, чтобы не залипать на месте
+                this.velocityX = this.direction * this.moveSpeed * 0.55 * this.slowFactor;
+                this.setAnimation('walk');
             }
-            this.setAnimation('idle');
 
         } else if (distance <= this.detectionRange) {
             // Преследование
@@ -354,11 +361,26 @@ class Enemy extends Entity {
             this.setAnimation('walk');
 
         } else {
-            // Бездействие
-            this.aiState = 'idle';
-            this.velocityX = 0;
-            this.setAnimation('idle');
+            // Патруль вне зоны обнаружения
+            this.runWander(dt);
         }
+    }
+
+    /**
+     * Примитивное блуждание, чтобы враги не стояли на месте
+     */
+    runWander(dt) {
+        this.aiState = 'wander';
+        this.wanderTimer += dt;
+        if (this.wanderTimer >= this.wanderSwitchTime) {
+            this.wanderTimer = 0;
+            this.wanderSwitchTime = 1 + Math.random() * 1.5;
+            this.wanderDirection = Math.random() < 0.5 ? -1 : 1;
+        }
+
+        this.direction = this.wanderDirection;
+        this.velocityX = this.direction * this.moveSpeed * this.wanderSpeedFactor * this.slowFactor;
+        this.setAnimation('walk');
     }
 
     /**
