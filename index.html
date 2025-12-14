@@ -12,7 +12,7 @@
         }
 
         body {
-            background-color: #1a1a2e;
+            background-color: #0a0a15;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -22,12 +22,16 @@
 
         #game-container {
             position: relative;
+            width: fit-content;
+            height: fit-content;
         }
 
         #game-canvas {
             display: block;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
+            border: 2px solid #2a2a4a;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
         }
 
         #loading {
@@ -36,8 +40,24 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Скрытие скроллбаров */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        
+        html {
+            scrollbar-width: none;
         }
     </style>
 </head>
@@ -46,8 +66,19 @@
         <canvas id="game-canvas"></canvas>
         <div id="loading">Загрузка...</div>
     </div>
+    <!-- Менеджеры -->
+    <script src="js/EventManager.js"></script>
     <script src="js/SpriteManager.js"></script>
     <script src="js/MapManager.js"></script>
+    <script src="js/PhysicsManager.js"></script>
+    <script src="js/GameManager.js"></script>
+    
+    <!-- Сущности -->
+    <script src="js/Entity.js"></script>
+    <script src="js/Player.js"></script>
+    
+    <!-- Камера и игра -->
+    <script src="js/Camera.js"></script>
     <script src="js/Game.js"></script>
     <script src="js/main.js"></script>
 </body>

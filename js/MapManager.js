@@ -9,6 +9,8 @@ class MapManager {
         this.mapData = null;
         // Слои карты
         this.layers = [];
+        // Паттерны слоев, которые не участвуют в коллизиях (например, небо/декор)
+        this.nonCollidablePatterns = [/sky/i, /flora/i, /background/i];
         // Размеры карты в тайлах
         this.width = 0;
         this.height = 0;
@@ -134,6 +136,27 @@ class MapManager {
             width: this.width * this.tileWidth,
             height: this.height * this.tileHeight
         };
+    }
+
+    /**
+     * Проверяет, участвует ли слой в коллизиях
+     * @param {number} layerIndex
+     * @returns {boolean}
+     */
+    isCollidableLayer(layerIndex) {
+        const layer = this.layers[layerIndex];
+        if (!layer) return false;
+
+        // Если есть свойство collidable в Tiled
+        if (layer.properties) {
+            const collProp = layer.properties.find(p => p.name === 'collidable');
+            if (collProp !== undefined) {
+                return Boolean(collProp.value);
+            }
+        }
+
+        // По умолчанию слои, совпадающие с паттернами sky/decor/background, не коллизят
+        return !this.nonCollidablePatterns.some((re) => re.test(layer.name || ''));
     }
 
     /**
