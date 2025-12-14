@@ -60,7 +60,6 @@ class Game {
         
         // Создаём игрока в центре карты
         await this.gameManager.spawnPlayerAtCenter();
-        await this.gameManager.giveStarterSpells();
         
         // Настраиваем камеру
         const mapSize = this.mapManager.getPixelSize();
@@ -82,7 +81,7 @@ class Game {
         await this.spriteManager.loadTileset('tiles.json');
         
         // Загружаем карту
-        await this.loadMap('map2.json');
+        await this.loadMap('map.json');
         
         console.log('Game: Ресурсы загружены');
     }

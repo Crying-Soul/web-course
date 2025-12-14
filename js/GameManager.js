@@ -206,11 +206,13 @@ class GameManager {
             throw new Error('GameManager: MapManager не готов');
         }
 
-        // Фиксированные координаты спавна для тестирования
-        const spawnX = 163*16;
-        const spawnY = 50*16;
+        const mapSize = this.mapManager.getPixelSize();
+        const centerX = mapSize.width / 2;
 
-        return await this.createPlayer(spawnX, spawnY);
+        // Ищем позицию земли в центре карты
+        const spawnY = this.findGroundLevel(centerX);
+
+        return await this.createPlayer(centerX - 18, spawnY - 52); // Смещаем с учётом размера игрока
     }
 
     /**
@@ -433,13 +435,25 @@ class GameManager {
 
         // Обновляем телепорты
         const teleportData = this.teleportManager.update(dt, this.player, this.eventManager);
-        if (teleportData && game.handleTeleport) {
-            game.handleTeleport(teleportData);
+        if (teleportData) {
+            if (teleportData.name && teleportData.name.toLowerCase() === 'end run') {
+                // Специальный телепорт окончания забега
+                this.stats.score += 1000;
+                console.log('End Run! +1000 очков');
+                this.gameOver();
+            } else if (game.handleTeleport) {
+                game.handleTeleport(teleportData);
+            }
         }
 
         // Обновляем игрока
         if (this.player && this.player.active) {
             this.player.update(dt, game);
+        }
+
+        // Проверяем падение за карту
+        if (this.player && this.player.y > this.mapManager.getPixelSize().height) {
+            this.gameOver();
         }
 
         // Обновляем всех сущностей

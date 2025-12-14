@@ -695,6 +695,12 @@ class Player extends Entity {
      * @param {number} amount - Количество урона
      */
     takeDamage(amount) {
+        // В режиме отладки игрок бессмертен
+        if (this.gameManager && this.gameManager.debug) {
+            console.log(`Player: Урон заблокирован в режиме отладки (${amount})`);
+            return;
+        }
+
         // Неуязвимость после удара
         if (this.invincibleTimer > 0) return;
         

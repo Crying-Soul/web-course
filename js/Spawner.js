@@ -17,13 +17,17 @@ class Spawner {
         this.enemyType = config.enemyType || config.class;
         
         // Максимальное количество живых врагов от этого спавнера
-        this.maxEnemies = config.maxEnemies || 3;
+        this.baseMaxEnemies = config.maxEnemies || 3;
+        // Добавляем случайный разброс ±30%
+        this.maxEnemies = Math.max(1, Math.round(this.baseMaxEnemies * (0.7 + Math.random() * 0.6)));
         
         // Текущее количество живых врагов
         this.aliveCount = 0;
         
-        // Интервал между спавнами (секунды)
-        this.spawnInterval = config.spawnInterval || 5;
+        // Базовый интервал между спавнами (секунды)
+        this.baseSpawnInterval = config.spawnInterval || 5;
+        // Добавляем случайный разброс ±40%
+        this.spawnInterval = this.baseSpawnInterval * (0.6 + Math.random() * 0.8);
         
         // Таймер до следующего спавна
         this.spawnTimer = config.initialDelay || 0;
@@ -51,6 +55,18 @@ class Spawner {
      */
     update(dt, gameManager) {
         if (!this.active) return;
+        
+        // Проверяем расстояние до игрока (спавним только в радиусе 400 пикселей)
+        const player = gameManager.player;
+        if (player) {
+            const dx = (this.x + this.width / 2) - (player.x + player.displayWidth / 2);
+            const dy = (this.y + this.height / 2) - (player.y + player.displayHeight / 2);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 400) {
+                return; // Игрок слишком далеко, не спавним
+            }
+        }
         
         // Уменьшаем таймер
         this.spawnTimer -= dt;
@@ -80,7 +96,7 @@ class Spawner {
         if (enemy) {
             this.aliveCount++;
             this.totalSpawned++;
-            console.log(`${this.name}: Spawned ${this.enemyType} (${this.aliveCount}/${this.maxEnemies})`);
+            console.log(`${this.name}: Spawned ${this.enemyType} (${this.aliveCount}/${this.maxEnemies}) at ${spawnX.toFixed(0)},${spawnY.toFixed(0)}`);
         }
     }
 
@@ -117,12 +133,25 @@ class Spawner {
         );
         ctx.stroke();
         
+        // Радиус активации (400 пикселей)
+        ctx.strokeStyle = 'rgba(255, 255, 0, 0.2)';
+        ctx.beginPath();
+        ctx.arc(
+            screenX + this.width / 2,
+            screenY + this.height / 2,
+            400,
+            0,
+            Math.PI * 2
+        );
+        ctx.stroke();
+        
         // Информация
         ctx.fillStyle = '#00ff00';
         ctx.font = '10px monospace';
         ctx.textAlign = 'left';
-        ctx.fillText(`${this.enemyType}`, screenX, screenY - 14);
-        ctx.fillText(`${this.aliveCount}/${this.maxEnemies}`, screenX, screenY - 2);
+        ctx.fillText(`${this.enemyType}`, screenX, screenY - 26);
+        ctx.fillText(`${this.aliveCount}/${this.maxEnemies} (${this.baseMaxEnemies})`, screenX, screenY - 14);
+        ctx.fillText(`I:${this.spawnInterval.toFixed(1)}s (${this.baseSpawnInterval}s)`, screenX, screenY - 2);
     }
 }
 

@@ -110,7 +110,8 @@ class Teleport {
             targetX: this.targetX,
             targetY: this.targetY,
             targetTeleportId: this.targetTeleportId,
-            sourceTeleportId: this.id
+            sourceTeleportId: this.id,
+            name: this.name
         };
     }
 
