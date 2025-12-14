@@ -75,7 +75,11 @@ class MagicProjectile {
     hitEnemy(enemy) {
         this.hitSet.add(enemy);
         if (typeof enemy.takeDamage === 'function') {
-            enemy.takeDamage(this.damage, this.owner, { spellId: this.spellId, onKillMana: this.onKillMana });
+            enemy.takeDamage(this.damage, this.owner, { 
+                spellId: this.spellId, 
+                onKillMana: this.onKillMana,
+                element: this.element 
+            });
         }
 
         if (this.slowAmount > 0 && typeof enemy.applySlow === 'function') {
@@ -107,7 +111,11 @@ class MagicProjectile {
             const dx = enemy.x + enemy.displayWidth / 2 - this.x;
             const dy = enemy.y + enemy.displayHeight / 2 - this.y;
             if (Math.hypot(dx, dy) <= this.explosionRadius) {
-                enemy.takeDamage(this.damage * 0.75, this.owner, { spellId: this.spellId, onKillMana: this.onKillMana });
+                enemy.takeDamage(this.damage * 0.75, this.owner, { 
+                    spellId: this.spellId, 
+                    onKillMana: this.onKillMana,
+                    element: this.element 
+                });
             }
         }
     }

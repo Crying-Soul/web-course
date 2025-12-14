@@ -60,15 +60,13 @@ class Game {
         
         // Создаём игрока в центре карты
         await this.gameManager.spawnPlayerAtCenter();
+        await this.gameManager.giveStarterSpells();
         
         // Настраиваем камеру
         const mapSize = this.mapManager.getPixelSize();
         this.camera.setWorldBounds(mapSize.width, mapSize.height);
         this.camera.setTarget(this.gameManager.player);
         this.camera.centerOnTarget();
-        
-        // Спавним тестовый контент (предметы и враги)
-        await this.gameManager.spawnTestContent();
         
         console.log('Game: Инициализация завершена');
     }
@@ -84,9 +82,119 @@ class Game {
         await this.spriteManager.loadTileset('tiles.json');
         
         // Загружаем карту
-        await this.mapManager.loadMap('map.json');
+        await this.loadMap('map.json');
         
         console.log('Game: Ресурсы загружены');
+    }
+
+    /**
+     * Загружает карту и объекты на ней (спавнеры, телепорты)
+     * @param {string} mapPath - Путь к файлу карты
+     */
+    async loadMap(mapPath) {
+        await this.mapManager.loadMap(mapPath);
+        
+        // Загружаем объекты карты (спавнеры, телепорты)
+        if (this.mapManager.mapData) {
+            this.gameManager.loadMapObjects(this.mapManager.mapData);
+            this.gameManager.currentMapPath = mapPath;
+        }
+    }
+
+    /**
+     * Обрабатывает телепортацию на другую карту
+     * @param {Object} teleportData - Данные телепортации
+     */
+    async handleTeleport(teleportData) {
+        if (!teleportData || !teleportData.targetMap) {
+            console.warn('Game: Нет целевой карты для телепортации');
+            return;
+        }
+        
+        console.log(`Game: Телепортация на карту ${teleportData.targetMap}`);
+        
+        // Сохраняем состояние игрока
+        const playerState = this.savePlayerState();
+        
+        // Очищаем текущие сущности
+        this.gameManager.entities = [];
+        this.gameManager.items = [];
+        this.gameManager.projectiles = [];
+        this.gameManager.spawnerManager.reset();
+        
+        // Загружаем новую карту
+        await this.loadMap(teleportData.targetMap);
+        
+        // Обновляем физику для новой карты
+        this.physicsManager = new PhysicsManager(this.mapManager);
+        this.gameManager.physicsManager = this.physicsManager;
+        
+        // Настраиваем камеру для новой карты
+        const mapSize = this.mapManager.getPixelSize();
+        this.camera.setWorldBounds(mapSize.width, mapSize.height);
+        
+        // Определяем позицию спавна
+        let spawnX, spawnY;
+        
+        if (teleportData.targetTeleportId) {
+            // Ищем целевой телепорт
+            const targetTeleport = this.gameManager.teleportManager.getTeleportById(teleportData.targetTeleportId);
+            if (targetTeleport) {
+                spawnX = targetTeleport.x + targetTeleport.width / 2 - 18;
+                spawnY = targetTeleport.y + targetTeleport.height - 52;
+            }
+        }
+        
+        if (spawnX === undefined && teleportData.targetX !== null) {
+            spawnX = teleportData.targetX;
+            spawnY = teleportData.targetY;
+        }
+        
+        if (spawnX === undefined) {
+            // По умолчанию - центр карты
+            spawnX = mapSize.width / 2 - 18;
+            spawnY = this.gameManager.findGroundLevel(mapSize.width / 2) - 52;
+        }
+        
+        // Перемещаем игрока
+        this.gameManager.player.x = spawnX;
+        this.gameManager.player.y = spawnY;
+        this.gameManager.player.velocityX = 0;
+        this.gameManager.player.velocityY = 0;
+        
+        // Восстанавливаем состояние
+        this.restorePlayerState(playerState);
+        
+        // Центрируем камеру
+        this.camera.centerOnTarget();
+        
+        console.log(`Game: Телепортация завершена, позиция: (${spawnX}, ${spawnY})`);
+    }
+
+    /**
+     * Сохраняет состояние игрока
+     * @returns {Object}
+     */
+    savePlayerState() {
+        const player = this.gameManager.player;
+        return {
+            health: player.health,
+            mana: player.mana,
+            buffs: [...player.buffs],
+            inventory: player.inventory.slots.map(slot => slot ? slot.clone() : null)
+        };
+    }
+
+    /**
+     * Восстанавливает состояние игрока
+     * @param {Object} state
+     */
+    restorePlayerState(state) {
+        const player = this.gameManager.player;
+        player.health = state.health;
+        player.mana = state.mana;
+        player.buffs = state.buffs;
+        // Инвентарь уже должен быть сохранён
     }
 
     /**

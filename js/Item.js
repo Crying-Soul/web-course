@@ -208,6 +208,7 @@ class Item {
  * Регистр типов предметов
  */
 const ItemTypes = {
+    // === БАЗОВЫЕ ЗАКЛИНАНИЯ ===
     ARCANE_BOLT: {
         id: 'arcane_bolt',
         name: 'Аркановый заряд',
@@ -223,7 +224,9 @@ const ItemTypes = {
         trailColors: ['#7cf7ff', '#b9f3ff'],
         pierce: 0,
         explosionRadius: 0,
-        element: 'arcane'
+        element: 'arcane',
+        rarity: 'common',
+        dropWeight: 30
     },
     FROST_LANCE: {
         id: 'frost_lance',
@@ -241,7 +244,9 @@ const ItemTypes = {
         pierce: 1,
         explosionRadius: 0,
         slow: 0.25,
-        element: 'frost'
+        element: 'frost',
+        rarity: 'uncommon',
+        dropWeight: 20
     },
     SOLAR_ORB: {
         id: 'solar_orb',
@@ -259,9 +264,267 @@ const ItemTypes = {
         pierce: 0,
         explosionRadius: 60,
         element: 'solar',
-        onKillMana: 6
+        onKillMana: 6,
+        rarity: 'uncommon',
+        dropWeight: 15
+    },
+    
+    // === НОВЫЕ ЗАКЛИНАНИЯ ===
+    FLAME_BURST: {
+        id: 'flame_burst',
+        name: 'Огненная вспышка',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#ff4400',
+        damage: 35,
+        manaCost: 15,
+        cooldown: 0.6,
+        projectileSpeed: 350,
+        projectileRadius: 9,
+        projectileLife: 1.8,
+        trailColors: ['#ff6600', '#ffcc00', '#ff3300'],
+        pierce: 0,
+        explosionRadius: 45,
+        element: 'fire',
+        rarity: 'uncommon',
+        dropWeight: 18
+    },
+    LIGHTNING_BOLT: {
+        id: 'lightning_bolt',
+        name: 'Молния',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#ffff00',
+        damage: 45,
+        manaCost: 20,
+        cooldown: 0.9,
+        projectileSpeed: 700,
+        projectileRadius: 5,
+        projectileLife: 1.0,
+        trailColors: ['#ffffff', '#ffff00', '#aaccff'],
+        pierce: 3,
+        explosionRadius: 0,
+        element: 'lightning',
+        rarity: 'rare',
+        dropWeight: 10
+    },
+    VOID_SPHERE: {
+        id: 'void_sphere',
+        name: 'Сфера Пустоты',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#6600cc',
+        damage: 55,
+        manaCost: 30,
+        cooldown: 1.5,
+        projectileSpeed: 180,
+        projectileRadius: 14,
+        projectileLife: 3.0,
+        trailColors: ['#330066', '#6600cc', '#9933ff'],
+        pierce: 2,
+        explosionRadius: 80,
+        slow: 0.4,
+        element: 'void',
+        onKillMana: 10,
+        rarity: 'rare',
+        dropWeight: 8
+    },
+    POISON_CLOUD: {
+        id: 'poison_cloud',
+        name: 'Ядовитое облако',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#00ff00',
+        damage: 15,
+        manaCost: 10,
+        cooldown: 0.4,
+        projectileSpeed: 280,
+        projectileRadius: 12,
+        projectileLife: 2.5,
+        trailColors: ['#00ff00', '#88ff00', '#ccff00'],
+        pierce: 5,
+        explosionRadius: 0,
+        slow: 0.15,
+        element: 'poison',
+        rarity: 'common',
+        dropWeight: 25
+    },
+    CRYSTAL_SHARD: {
+        id: 'crystal_shard',
+        name: 'Кристальный осколок',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#ff88ff',
+        damage: 22,
+        manaCost: 8,
+        cooldown: 0.3,
+        projectileSpeed: 500,
+        projectileRadius: 6,
+        projectileLife: 2.0,
+        trailColors: ['#ff88ff', '#ffaaff', '#ffccff'],
+        pierce: 1,
+        explosionRadius: 0,
+        element: 'crystal',
+        rarity: 'common',
+        dropWeight: 28
+    },
+    METEOR_STRIKE: {
+        id: 'meteor_strike',
+        name: 'Удар метеора',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#ff6600',
+        damage: 80,
+        manaCost: 45,
+        cooldown: 2.5,
+        projectileSpeed: 400,
+        projectileRadius: 16,
+        projectileLife: 2.0,
+        trailColors: ['#ff3300', '#ff6600', '#ffcc00'],
+        pierce: 0,
+        explosionRadius: 120,
+        element: 'fire',
+        onKillMana: 15,
+        rarity: 'epic',
+        dropWeight: 3
+    },
+    CHAIN_LIGHTNING: {
+        id: 'chain_lightning',
+        name: 'Цепная молния',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#88ffff',
+        damage: 30,
+        manaCost: 25,
+        cooldown: 1.0,
+        projectileSpeed: 600,
+        projectileRadius: 7,
+        projectileLife: 1.5,
+        trailColors: ['#88ffff', '#aaffff', '#ffffff'],
+        pierce: 6,
+        explosionRadius: 25,
+        element: 'lightning',
+        rarity: 'rare',
+        dropWeight: 7
+    },
+    SHADOW_BOLT: {
+        id: 'shadow_bolt',
+        name: 'Теневой снаряд',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#333366',
+        damage: 40,
+        manaCost: 18,
+        cooldown: 0.7,
+        projectileSpeed: 380,
+        projectileRadius: 8,
+        projectileLife: 2.2,
+        trailColors: ['#111133', '#333366', '#555599'],
+        pierce: 0,
+        explosionRadius: 35,
+        slow: 0.3,
+        element: 'shadow',
+        onKillMana: 8,
+        rarity: 'uncommon',
+        dropWeight: 15
+    },
+    HOLY_LIGHT: {
+        id: 'holy_light',
+        name: 'Святой свет',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#ffffcc',
+        damage: 50,
+        manaCost: 22,
+        cooldown: 0.8,
+        projectileSpeed: 450,
+        projectileRadius: 10,
+        projectileLife: 2.0,
+        trailColors: ['#ffffcc', '#ffffff', '#ffff88'],
+        pierce: 2,
+        explosionRadius: 50,
+        element: 'holy',
+        onKillMana: 5,
+        rarity: 'rare',
+        dropWeight: 9
+    },
+    WATER_WAVE: {
+        id: 'water_wave',
+        name: 'Водяная волна',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#0088ff',
+        damage: 25,
+        manaCost: 14,
+        cooldown: 0.5,
+        projectileSpeed: 320,
+        projectileRadius: 11,
+        projectileLife: 2.3,
+        trailColors: ['#0066cc', '#0088ff', '#66ccff'],
+        pierce: 3,
+        explosionRadius: 0,
+        slow: 0.35,
+        element: 'water',
+        rarity: 'uncommon',
+        dropWeight: 18
+    },
+    EARTH_SPIKE: {
+        id: 'earth_spike',
+        name: 'Земляной шип',
+        type: 'spell',
+        imagePath: '',
+        iconColor: '#885522',
+        damage: 60,
+        manaCost: 28,
+        cooldown: 1.2,
+        projectileSpeed: 250,
+        projectileRadius: 13,
+        projectileLife: 1.8,
+        trailColors: ['#664411', '#885522', '#aa7744'],
+        pierce: 0,
+        explosionRadius: 70,
+        slow: 0.5,
+        element: 'earth',
+        rarity: 'rare',
+        dropWeight: 8
     }
 };
+
+/**
+ * Таблица редкости для цвета свечения
+ */
+const RarityColors = {
+    common: '#ffffff',
+    uncommon: '#00ff00',
+    rare: '#0088ff',
+    epic: '#aa00ff',
+    legendary: '#ff8800'
+};
+
+/**
+ * Получить случайный тип заклинания на основе веса дропа
+ * @returns {string} ID типа предмета
+ */
+function getRandomSpellType() {
+    const spells = Object.values(ItemTypes).filter(item => item.type === 'spell');
+    
+    // Вычисляем общий вес
+    let totalWeight = 0;
+    for (const spell of spells) {
+        totalWeight += spell.dropWeight || 10;
+    }
+    
+    // Выбираем случайный
+    let random = Math.random() * totalWeight;
+    for (const spell of spells) {
+        random -= spell.dropWeight || 10;
+        if (random <= 0) {
+            return spell.id;
+        }
+    }
+    
+    return 'arcane_bolt';
+}
 
 /**
  * Создаёт предмет по типу

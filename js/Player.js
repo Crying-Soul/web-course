@@ -6,7 +6,7 @@ class Player extends Entity {
     constructor(config = {}) {
         // Конфигурация спрайта игрока (BestiaryGirl)
         const playerSpriteConfig = {
-            imagePath: 'images/npc/BestiaryGirl_Default.png',
+            imagePath: 'images/npc/FuryPlayer.png',
             frameWidth: 40,       // Ширина одного кадра
             frameHeight: 55,      // Высота одного кадра
             offsetX: 0,           // Отступ слева
@@ -89,6 +89,10 @@ class Player extends Entity {
 
         // Баффы
         this.buffs = [];
+
+        // Провал через платформы по нажатию S
+        this.dropThroughTimer = 0;
+        this.isDroppingThrough = false;
         
         // Эффект урона
         this.damageFlashTimer = 0;
@@ -162,10 +166,27 @@ class Player extends Entity {
         return 1 + this.getBuffValue('manaRegen');
     }
 
+    getCooldownReduction() {
+        return Math.min(0.5, this.getBuffValue('cooldownReduction')); // Максимум 50%
+    }
+
+    getMoveSpeedMultiplier() {
+        return 1 + this.getBuffValue('moveSpeed');
+    }
+
+    getDefenseBonus() {
+        return this.getBuffValue('defense');
+    }
+
+    getLifeSteal() {
+        return this.getBuffValue('lifeSteal');
+    }
+
     /**
      * Реакция на убийство врага
      */
     onKill(enemy, context = {}) {
+        // Базовый бафф Arcane Fury за каждое убийство
         this.addBuff('arcane_fury', {
             stacks: 1,
             maxStacks: 12,
@@ -179,6 +200,105 @@ class Player extends Entity {
 
         const manaBonus = 10 + (context.onKillMana || 0);
         this.mana = Math.min(this.maxMana, this.mana + manaBonus);
+        
+        // Шанс получить дополнительные баффы на основе элемента убившего заклинания
+        this.tryGrantElementalBuff(context);
+        
+        // Лайфстил при убийстве
+        const lifeSteal = this.getLifeSteal();
+        if (lifeSteal > 0) {
+            const healAmount = Math.floor((enemy.maxHealth || 30) * lifeSteal);
+            this.health = Math.min(this.maxHealth, this.health + healAmount);
+        }
+    }
+
+    /**
+     * Пытается дать элементальный бафф в зависимости от типа заклинания
+     */
+    tryGrantElementalBuff(context) {
+        const element = context.element;
+        if (!element) return;
+        
+        // 20% шанс получить специальный бафф
+        if (Math.random() > 0.2) return;
+        
+        switch (element) {
+            case 'fire':
+                this.addBuff('burning_soul', {
+                    stacks: 1,
+                    maxStacks: 5,
+                    duration: 10,
+                    bonuses: { damage: 0.08 }
+                });
+                break;
+            case 'frost':
+                this.addBuff('frost_armor', {
+                    stacks: 1,
+                    maxStacks: 5,
+                    duration: 12,
+                    bonuses: { defense: 2 }
+                });
+                break;
+            case 'lightning':
+                this.addBuff('static_charge', {
+                    stacks: 1,
+                    maxStacks: 5,
+                    duration: 8,
+                    bonuses: { cooldownReduction: 0.04 }
+                });
+                break;
+            case 'void':
+            case 'shadow':
+                this.addBuff('void_embrace', {
+                    stacks: 1,
+                    maxStacks: 5,
+                    duration: 10,
+                    bonuses: { lifeSteal: 0.02 }
+                });
+                break;
+            case 'holy':
+                this.addBuff('divine_blessing', {
+                    stacks: 1,
+                    maxStacks: 3,
+                    duration: 15,
+                    bonuses: { manaRegen: 0.15 }
+                });
+                break;
+            case 'arcane':
+                this.addBuff('arcane_intellect', {
+                    stacks: 1,
+                    maxStacks: 5,
+                    duration: 12,
+                    bonuses: { damage: 0.03, projectileSpeed: 0.05 }
+                });
+                break;
+            case 'earth':
+                this.addBuff('stone_skin', {
+                    stacks: 1,
+                    maxStacks: 5,
+                    duration: 15,
+                    bonuses: { defense: 3, moveSpeed: -0.02 }
+                });
+                break;
+            case 'water':
+                this.addBuff('flow_state', {
+                    stacks: 1,
+                    maxStacks: 5,
+                    duration: 10,
+                    bonuses: { moveSpeed: 0.05, manaRegen: 0.05 }
+                });
+                break;
+        }
+    }
+
+    /**
+     * Применяет бафф напрямую (для пауэр-апов)
+     * @param {string} buffId - ID баффа
+     * @param {Object} config - Конфигурация
+     */
+    applyPowerUp(buffId, config) {
+        this.addBuff(buffId, config);
+        console.log(`Player: Получен power-up ${buffId}!`);
     }
 
     /**
@@ -195,6 +315,48 @@ class Player extends Entity {
         
         // Горизонтальное движение
         let moveX = 0;
+
+        // Провалиться через платформу на S (только если стоим на платформе)
+        if (eventManager.isKeyJustPressed('KeyS') && this.onGround && game && game.mapManager && game.physicsManager) {
+            // Проверяем тайл под игроком
+            const bounds = this.getBounds();
+            const footX = bounds.left + bounds.width / 2;
+            const footY = bounds.bottom + 1;
+            const tileX = Math.floor(footX / game.mapManager.tileWidth);
+            const tileY = Math.floor(footY / game.mapManager.tileHeight);
+            let standingOnPlatform = false;
+            const foundTiles = [];
+            for (let i = 0; i < game.mapManager.layers.length; i++) {
+                if (!game.mapManager.isCollidableLayer(i)) continue;
+                const tileId = game.mapManager.getTileAt(i, tileX, tileY);
+                foundTiles.push({ layer: i, tileId });
+                if (game.physicsManager.isPlatformTile(tileId)) {
+                    standingOnPlatform = true;
+                    // remember which tile caused it
+                    var platformTileInfo = { layer: i, tileId };
+                    break;
+                }
+            }
+
+            // Debug info (only when debug mode is enabled)
+            if (game.gameManager && game.gameManager.debug) {
+                if (standingOnPlatform) {
+                    console.log(`Player: Detected platform under feet - tile ${platformTileInfo.tileId} at layer ${platformTileInfo.layer}`);
+                } else {
+                    console.log(`Player: No platform under feet. Found tiles: ${JSON.stringify(foundTiles)}`);
+                }
+            }
+
+            if (standingOnPlatform) {
+                this.dropThroughTimer = 0.25;
+                // Сразу начинаем падать вниз через платформу
+                this.onGround = false;
+                this.velocityY = Math.max(this.velocityY, 60);
+                if (game.gameManager && game.gameManager.debug) {
+                    console.log('Player: Drop-through initiated');
+                }
+            }
+        }
         
         if (eventManager.isKeyDown('KeyA') || eventManager.isKeyDown('ArrowLeft')) {
             moveX = -1;
@@ -205,9 +367,10 @@ class Player extends Entity {
             this.direction = 1;
         }
         
-        // Применяем скорость с учётом контроля в воздухе
+        // Применяем скорость с учётом контроля в воздухе и баффов
         const control = this.onGround ? 1 : this.airControl;
-        this.velocityX = moveX * this.moveSpeed * control;
+        const speedMult = this.getMoveSpeedMultiplier();
+        this.velocityX = moveX * this.moveSpeed * control * speedMult;
         
         // Прыжок
         if ((eventManager.isKeyJustPressed('Space') || eventManager.isKeyJustPressed('KeyW') || eventManager.isKeyJustPressed('ArrowUp'))) {
@@ -244,10 +407,12 @@ class Player extends Entity {
 
         if (this.mana < spell.manaCost) return;
 
-        // Расходуем ресурсы и ставим кулдауны
+        // Расходуем ресурсы и ставим кулдауны с учётом cooldown reduction
         this.mana -= spell.manaCost;
         this.manaRegenCooldown = this.manaRegenDelay;
-        this.spellCooldowns.set(spell.id, spell.cooldown);
+        const cdr = this.getCooldownReduction();
+        const actualCooldown = spell.cooldown * (1 - cdr);
+        this.spellCooldowns.set(spell.id, actualCooldown);
         this.globalCastLock = 0.08;
 
         this.isCasting = true;
@@ -338,6 +503,17 @@ class Player extends Entity {
                 this.isCasting = false;
             }
         }
+
+        // Таймер провала через платформы
+        if (this.dropThroughTimer > 0) {
+            this.dropThroughTimer -= dt;
+            if (this.dropThroughTimer <= 0) {
+                this.dropThroughTimer = 0;
+            }
+        }
+
+        // Флаг провала через платформы (используется PhysicsManager)
+        this.isDroppingThrough = this.dropThroughTimer > 0;
 
         // Персональные кулдауны заклинаний
         for (const [spellId, value] of this.spellCooldowns.entries()) {
@@ -431,7 +607,11 @@ class Player extends Entity {
         // Неуязвимость после удара
         if (this.invincibleTimer > 0) return;
         
-        this.health -= amount;
+        // Применяем защиту
+        const defense = this.getDefenseBonus();
+        const actualDamage = Math.max(1, amount - defense);
+        
+        this.health -= actualDamage;
         this.isDamaged = true;
         this.damageFlashTimer = this.damageFlashDuration;
         this.invincibleTimer = this.invincibleDuration;

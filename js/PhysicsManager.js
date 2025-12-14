@@ -14,6 +14,10 @@ class PhysicsManager {
         // По умолчанию все непустые тайлы считаются твёрдыми
         this.solidTiles = new Set();
         this.useAllAsSolid = true; // Все непустые тайлы твёрдые
+
+        // Платформы (прозрачные снизу / можно провалиться через S)
+        // NOTE: include id 128 as well (wood-plat-00)
+        this.platformTiles = new Set([128, 129, 130, 131, 132]);
     }
 
     /**
@@ -37,12 +41,21 @@ class PhysicsManager {
     }
 
     /**
+     * Проверяет, является ли тайл платформой (пропускает снизу, можно провалиться)
+     * @param {number} tileId
+     * @returns {boolean}
+     */
+    isPlatformTile(tileId) {
+        return this.platformTiles.has(tileId);
+    }
+
+    /**
      * Проверяет, есть ли твёрдый тайл в указанной позиции мира
      * @param {number} worldX - X координата в пикселях
      * @param {number} worldY - Y координата в пикселях
      * @returns {boolean}
      */
-    isSolidAt(worldX, worldY) {
+    isSolidAt(worldX, worldY, options = {}) {
         const tileX = Math.floor(worldX / this.mapManager.tileWidth);
         const tileY = Math.floor(worldY / this.mapManager.tileHeight);
         
@@ -50,6 +63,29 @@ class PhysicsManager {
         for (let i = 0; i < this.mapManager.layers.length; i++) {
             if (!this.mapManager.isCollidableLayer(i)) continue;
             const tileId = this.mapManager.getTileAt(i, tileX, tileY);
+            if (tileId === 0) continue;
+
+            const isPlatform = this.isPlatformTile(tileId);
+
+            // Платформы: пропускаем, если не разрешено учитывать платформы
+            if (isPlatform) {
+                if (options.ignorePlatforms) continue;
+
+                // Платформа срабатывает только при движении вниз и если игрок не хочет провалиться
+                const checkingBottom = options.checkingBottom;
+                const dropping = options.entity?.dropThroughTimer > 0 || options.entity?.isDroppingThrough;
+                const movingUp = options.entity?.velocityY < 0;
+
+                if (movingUp || !checkingBottom || dropping) {
+                  
+                    continue;
+                }
+
+              
+
+                return true;
+            }
+
             if (this.isSolidTile(tileId)) return true;
         }
         return false;
@@ -102,7 +138,8 @@ class PhysicsManager {
         ];
 
         for (const point of checkPoints) {
-            if (this.isSolidAt(point.x, point.y)) {
+            // Платформы не блокируют по X
+            if (this.isSolidAt(point.x, point.y, { ignorePlatforms: true })) {
                 entity.x = oldX;
                 entity.velocityX = 0;
                 return;
@@ -136,7 +173,7 @@ class PhysicsManager {
         // Проверка нижних точек (падение)
         if (entity.velocityY >= 0) {
             for (const point of bottomPoints) {
-                if (this.isSolidAt(point.x, point.y)) {
+                if (this.isSolidAt(point.x, point.y, { checkingBottom: true, entity })) {
                     // Выравниваем по верхней границе тайла
                     const tileY = Math.floor(point.y / this.mapManager.tileHeight);
                     entity.y = tileY * this.mapManager.tileHeight - entity.hitboxHeight - entity.hitboxOffsetY;
@@ -150,7 +187,7 @@ class PhysicsManager {
         // Проверка верхних точек (прыжок в потолок)
         if (entity.velocityY < 0) {
             for (const point of topPoints) {
-                if (this.isSolidAt(point.x, point.y)) {
+                if (this.isSolidAt(point.x, point.y, { ignorePlatforms: true })) {
                     entity.y = oldY;
                     entity.velocityY = 0;
                     return;
@@ -170,9 +207,9 @@ class PhysicsManager {
         // Проверяем точку чуть ниже ног
         const checkY = bounds.bottom + 1;
         
-        return this.isSolidAt(bounds.left + 2, checkY) ||
-               this.isSolidAt(bounds.right - 2, checkY) ||
-               this.isSolidAt(bounds.left + bounds.width / 2, checkY);
+         return this.isSolidAt(bounds.left + 2, checkY, { checkingBottom: true, entity }) ||
+             this.isSolidAt(bounds.right - 2, checkY, { checkingBottom: true, entity }) ||
+             this.isSolidAt(bounds.left + bounds.width / 2, checkY, { checkingBottom: true, entity });
     }
 
     /**
