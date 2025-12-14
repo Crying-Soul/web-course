@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Управление:');
         console.log('  A/D или ←/→ - движение');
         console.log('  W/↑/Space - прыжок');
+        console.log('  ЛКМ или E - каст выбранного заклинания');
+        console.log('  1-6 - переключение заклинаний');
         console.log('  Escape - пауза');
         console.log('  F3 - режим отладки');
 

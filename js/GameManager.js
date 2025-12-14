@@ -10,6 +10,12 @@ class GameManager {
         // Массив всех сущностей (враги, NPC и т.д.)
         this.entities = [];
         
+        // Массив предметов на земле
+        this.items = [];
+
+        // Снаряды магии
+        this.projectiles = [];
+        
         // Состояние игры
         this.state = 'playing'; // 'playing', 'paused', 'gameover', 'victory'
         
@@ -51,6 +57,7 @@ class GameManager {
     async createPlayer(x, y) {
         this.player = new Player({ x, y });
         await this.player.loadSprite();
+        this.player.gameManager = this;
         
         console.log(`GameManager: Игрок создан на позиции (${x}, ${y})`);
         return this.player;
@@ -117,6 +124,95 @@ class GameManager {
             this.entities.splice(index, 1);
         }
     }
+    
+    /**
+     * Добавляет предмет на землю
+     * @param {Item} item
+     */
+    addItem(item) {
+        this.items.push(item);
+    }
+    
+    /**
+     * Спавнит предмет в указанной позиции
+     * @param {string} itemTypeId - ID типа предмета
+     * @param {number} x - Позиция X
+     * @param {number} y - Позиция Y
+     * @returns {Promise<Item>}
+     */
+    async spawnItem(itemTypeId, x, y, options = {}) {
+        const item = createItem(itemTypeId, x, y);
+        await item.loadImage();
+
+        // Параметры начальной скорости (для падения/выброса)
+        if (typeof options.velocityX === 'number') item.velocityX = options.velocityX;
+        if (typeof options.velocityY === 'number') item.velocityY = options.velocityY;
+        // Если предмет спавнится "сверху", гарантируем что он в воздухе
+        if (options.drop) item.onGround = false;
+
+        this.addItem(item);
+        console.log(`GameManager: Предмет ${item.name} заспавнен на (${x}, ${y})`);
+        return item;
+    }
+    
+    /**
+     * Спавнит врага в указанной позиции
+     * @param {number} x - Позиция X
+     * @param {number} y - Позиция Y
+     * @param {Object} config - Дополнительная конфигурация
+     * @returns {Promise<Enemy>}
+     */
+    async spawnEnemy(x, y, config = {}) {
+        const enemy = new Enemy({ x, y, ...config });
+        await enemy.loadSprite();
+        enemy.setTarget(this.player);
+        enemy.gameManager = this;
+        this.addEntity(enemy);
+        console.log(`GameManager: Враг заспавнен на (${x}, ${y})`);
+        return enemy;
+    }
+    
+    /**
+     * Спавнит тестовый контент (предметы и врагов)
+     */
+    async spawnTestContent() {
+        const mapSize = this.mapManager.getPixelSize();
+        const centerX = mapSize.width / 2;
+
+        // Игрок сразу получает набор заклинаний
+        const starterSpells = ['arcane_bolt', 'frost_lance', 'solar_orb'];
+        for (const spellId of starterSpells) {
+            const spell = createItem(spellId);
+            await spell.loadImage();
+            this.player.inventory.addItem(spell);
+        }
+
+        // Спавним несколько врагов
+        await this.spawnEnemy(centerX - 200, this.findGroundLevel(centerX - 200) - 52, { health: 30, maxHealth: 30 });
+        await this.spawnEnemy(centerX + 200, this.findGroundLevel(centerX + 200) - 52, { health: 50, maxHealth: 50 });
+        await this.spawnEnemy(centerX + 300, this.findGroundLevel(centerX + 300) - 52, { health: 70, maxHealth: 70, damage: 15 });
+    }
+
+    /**
+     * Добавляет снаряд в игру
+     * @param {MagicProjectile} projectile
+     */
+    addProjectile(projectile) {
+        this.projectiles.push(projectile);
+    }
+
+    /**
+     * Обрабатывает смерть врага
+     * @param {Enemy} enemy
+     * @param {Entity|null} killer
+     * @param {Object} context
+     */
+    handleEnemyKilled(enemy, killer = null, context = {}) {
+        this.stats.kills += 1;
+        if (killer instanceof Player) {
+            killer.onKill(enemy, context);
+        }
+    }
 
     /**
      * Обновление всей игровой логики
@@ -141,6 +237,29 @@ class GameManager {
             }
         }
         
+        // Обновляем предметы
+        for (const item of this.items) {
+            if (item.active) {
+                item.update(dt);
+            }
+        }
+
+        // Обновляем снаряды
+        for (const projectile of this.projectiles) {
+            if (projectile.active) {
+                projectile.update(dt, game);
+            }
+        }
+        
+        // Применяем физику к предметам (падают на землю)
+        if (this.physicsManager) {
+            for (const item of this.items) {
+                if (item.active && item.hasPhysics) {
+                    this.physicsManager.applyPhysics(item, dt);
+                }
+            }
+        }
+
         // Физика
         if (this.physicsManager) {
             // Применяем физику к игроку
@@ -152,8 +271,10 @@ class GameManager {
             this.physicsManager.update(this.entities, dt);
         }
         
-        // Убираем неактивные сущности
+        // Убираем неактивные сущности и предметы
         this.entities = this.entities.filter(entity => entity.active);
+        this.items = this.items.filter(item => item.active);
+        this.projectiles = this.projectiles.filter(p => p.active);
         
         // Переключение режима отладки
         if (this.eventManager && this.eventManager.isKeyJustPressed('F3')) {
@@ -168,16 +289,21 @@ class GameManager {
      * @param {Camera} camera - Камера
      */
     render(ctx, camera) {
-        // Отрисовываем игрока
-        if (this.player && this.player.active) {
-            this.player.render(ctx, camera);
-            
-            if (this.debug) {
-                this.player.renderDebug(ctx, camera);
+        // Отрисовываем предметы на земле
+        for (const item of this.items) {
+            if (item.active) {
+                item.render(ctx, camera);
+            }
+        }
+
+        // Отрисовываем снаряды
+        for (const projectile of this.projectiles) {
+            if (projectile.active) {
+                projectile.render(ctx, camera);
             }
         }
         
-        // Отрисовываем сущности
+        // Отрисовываем сущности (врагов)
         for (const entity of this.entities) {
             if (entity.active) {
                 entity.render(ctx, camera);
@@ -186,6 +312,27 @@ class GameManager {
                     entity.renderDebug(ctx, camera);
                 }
             }
+        }
+        
+        // Отрисовываем игрока (поверх врагов)
+        if (this.player && this.player.active) {
+            this.player.render(ctx, camera);
+            
+            if (this.debug) {
+                this.player.renderDebug(ctx, camera);
+            }
+        }
+    }
+    
+    /**
+     * Отрисовка UI
+     * @param {CanvasRenderingContext2D} ctx
+     */
+    renderUI(ctx) {
+        // UI игрока (HP)
+        if (this.player) {
+            this.player.renderUI(ctx);
+            this.player.inventory.render(ctx);
         }
     }
 
@@ -198,7 +345,7 @@ class GameManager {
         
         // Фон для текста
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(2, 2, 180, 130);
+        ctx.fillRect(50, 2, 180, 150);
         
         ctx.fillStyle = '#00ff00';
         ctx.font = '10px monospace';
@@ -206,23 +353,25 @@ class GameManager {
         
         const info = [
             `State: ${this.state}`,
-            `Entities: ${this.entities.length}`,
+            `Enemies: ${this.entities.length}`,
+            `Items: ${this.items.length}`,
+            `Kills: ${this.stats.kills}`,
             `Time: ${this.stats.time.toFixed(1)}s`,
         ];
         
         if (this.player) {
             info.push(
                 `Player: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})`,
-                `Velocity: (${this.player.velocityX.toFixed(0)}, ${this.player.velocityY.toFixed(0)})`,
+                `HP: ${this.player.health}/${this.player.maxHealth}`,
+                `Mana: ${this.player.mana.toFixed(0)}/${this.player.maxMana}`,
                 `OnGround: ${this.player.onGround}`,
                 `Animation: ${this.player.currentAnimation}`,
-                `SpriteLoaded: ${this.player.imageLoaded}`,
-                `Direction: ${this.player.direction}`
+                `Casting: ${this.player.isCasting}`
             );
         }
         
         info.forEach((text, i) => {
-            ctx.fillText(text, 5, 15 + i * 12);
+            ctx.fillText(text, 55, 15 + i * 12);
         });
     }
 

@@ -204,6 +204,13 @@ class Entity {
         }
         
         ctx.save();
+        // Поддержка сглаживания/качества спрайта: некоторые спрайты высокого качества
+        const prevSmoothing = ctx.imageSmoothingEnabled;
+        const prevQuality = ctx.imageSmoothingQuality || 'low';
+        try {
+            ctx.imageSmoothingEnabled = !!this.spriteConfig.smooth;
+            if (this.spriteConfig.smooth) ctx.imageSmoothingQuality = 'high';
+        } catch (e) {}
         
         // Отзеркаливание: спрайт в файле ориентирован влево, поэтому
         // при направлении вправо (1) нужно отзеркалить его по X
@@ -222,7 +229,11 @@ class Entity {
                 screenX, screenY, this.displayWidth, this.displayHeight
             );
         }
-        
+        // Восстановим параметры сглаживания
+        try {
+            ctx.imageSmoothingEnabled = prevSmoothing;
+            ctx.imageSmoothingQuality = prevQuality;
+        } catch (e) {}
         ctx.restore();
     }
 

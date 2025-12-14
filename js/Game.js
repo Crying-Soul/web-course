@@ -67,6 +67,9 @@ class Game {
         this.camera.setTarget(this.gameManager.player);
         this.camera.centerOnTarget();
         
+        // Спавним тестовый контент (предметы и враги)
+        await this.gameManager.spawnTestContent();
+        
         console.log('Game: Инициализация завершена');
     }
 
@@ -211,6 +214,9 @@ class Game {
         
         // Рендерим игровые объекты
         this.gameManager.render(this.ctx, this.camera);
+        
+        // Рендерим UI (поверх всего)
+        this.gameManager.renderUI(this.ctx);
         
         // Отладочная информация
         this.gameManager.renderDebugInfo(this.ctx);
