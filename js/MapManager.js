@@ -160,6 +160,38 @@ class MapManager {
     }
 
     /**
+     * Возвращает type тайла по ID из карты (1-based)
+     * @param {number} mapTileId
+     * @returns {string|null}
+     */
+    getTileTypeById(mapTileId) {
+        if (!this.spriteManager || !mapTileId) return null;
+        return this.spriteManager.getTileType(mapTileId);
+    }
+
+    /**
+     * Определяет тип тайла в мировых координатах
+     * @param {number} worldX
+     * @param {number} worldY
+     * @returns {string|null}
+     */
+    getTileTypeAtWorld(worldX, worldY) {
+        const tileX = Math.floor(worldX / this.tileWidth);
+        const tileY = Math.floor(worldY / this.tileHeight);
+        if (tileX < 0 || tileY < 0 || tileX >= this.width || tileY >= this.height) return null;
+
+        // Берём первый непустой тайл с учётом коллизии
+        for (let i = 0; i < this.layers.length; i++) {
+            if (!this.isCollidableLayer(i)) continue;
+            const tileId = this.getTileAt(i, tileX, tileY);
+            if (tileId !== 0) {
+                return this.getTileTypeById(tileId) || null;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Проверяет готовность менеджера
      * @returns {boolean}
      */

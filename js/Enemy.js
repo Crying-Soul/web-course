@@ -227,6 +227,8 @@ class Enemy extends Entity {
             y: config.y
         });
 
+        this.enemyType = enemyType;
+
         // Параметры врага
         this.health = enemyConfig.health || 50;
         this.maxHealth = enemyConfig.maxHealth || enemyConfig.health || 50;
@@ -265,6 +267,9 @@ class Enemy extends Entity {
 
         // Визуальные эффекты
         this.tint = config.tint || null; // Цвет для отличия врагов
+
+        // Аудио таймеры
+        this.ambientTimer = 1 + Math.random() * 2;
     }
 
     /**
@@ -302,6 +307,16 @@ class Enemy extends Entity {
             if (this.slowTimer <= 0) {
                 this.slowFactor = 1;
             }
+        }
+
+        // Периодические звуки сущности
+        if (this.ambientTimer > 0) {
+            this.ambientTimer -= dt;
+        } else {
+            if (this.gameManager && this.gameManager.soundManager) {
+                this.gameManager.soundManager.playEnemyIdle(this.enemyType);
+            }
+            this.ambientTimer = 2.5 + Math.random() * 4.5;
         }
 
         // ИИ
@@ -410,6 +425,10 @@ class Enemy extends Entity {
      * @param {Object} context - Доп. сведения об источнике
      */
     takeDamage(amount, attacker = null, context = {}) {
+        if (this.gameManager && this.gameManager.soundManager) {
+            this.gameManager.soundManager.playEnemyHit(this.enemyType);
+        }
+
         this.health -= amount;
         this.isDamaged = true;
         this.damageFlashTimer = this.damageFlashDuration;
@@ -433,6 +452,10 @@ class Enemy extends Entity {
      * Смерть врага
      */
     die() {
+        if (this.gameManager && this.gameManager.soundManager) {
+            this.gameManager.soundManager.playEnemyDeath(this.enemyType);
+        }
+
         this.active = false;
         console.log('Enemy: Враг уничтожен');
 

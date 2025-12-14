@@ -61,6 +61,8 @@ class Player extends Entity {
         this.moveSpeed = 150;      // Скорость ходьбы
         this.jumpForce = 350;      // Сила прыжка
         this.airControl = 0.7;     // Контроль в воздухе (множитель)
+        this.footstepTimer = 0;
+        this.footstepInterval = 0.28;
         
         // Состояния
         this.isJumping = false;
@@ -638,6 +640,37 @@ class Player extends Entity {
         // Базовое обновление (анимация)
         super.update(dt, game);
     }
+
+    /**
+     * Вызывается после применения физики (для шагов и проверок поверхности)
+     */
+    afterPhysicsUpdate(dt, game) {
+        this.handleFootsteps(dt, game);
+    }
+
+    handleFootsteps(dt, game) {
+        if (!game || !game.mapManager || !game.soundManager) return;
+
+        const speed = Math.abs(this.velocityX);
+        const movingOnGround = this.onGround && speed > 18;
+
+        if (movingOnGround) {
+            this.footstepTimer -= dt;
+            if (this.footstepTimer <= 0) {
+                const bounds = this.getBounds();
+                const footX = bounds.left + bounds.width / 2;
+                const footY = bounds.bottom + 1;
+                const tileType = game.mapManager.getTileTypeAtWorld(footX, footY) || 'grass';
+                game.soundManager.playFootstep(tileType);
+
+                const speedFactor = Math.min(speed / this.moveSpeed, 1.6);
+                this.footstepTimer = Math.max(0.16, this.footstepInterval - 0.05 * speedFactor);
+            }
+        } else {
+            // Быстро отпускаем таймер, чтобы шаг звучал сразу после приземления/старта движения
+            this.footstepTimer = Math.min(this.footstepTimer, 0.1);
+        }
+    }
     
     /**
      * Подбирает предметы рядом
@@ -708,6 +741,10 @@ class Player extends Entity {
         const defense = this.getDefenseBonus();
         const actualDamage = Math.max(1, amount - defense);
         
+        if (this.gameManager && this.gameManager.soundManager) {
+            this.gameManager.soundManager.playPlayerHit();
+        }
+
         this.health -= actualDamage;
         this.isDamaged = true;
         this.damageFlashTimer = this.damageFlashDuration;

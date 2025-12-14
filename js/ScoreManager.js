@@ -1,36 +1,25 @@
 /**
  * ScoreManager - простое хранение результатов в JSON-структуре.
- * Пишем в localStorage (как JSON-строку), читаем стартовые данные из scores.json.
+ * Загружаем и сохраняем данные в `localStorage`.
  */
 class ScoreManager {
-    constructor(path = 'scores.json') {
-        this.path = path;
-        this.scores = [];
+    constructor() {
         this.storageKey = 'terraria_arena_scores';
+        this.scores = [];
     }
 
     async load() {
-        // Загружаем из localStorage, иначе из файла.
-        const saved = localStorage.getItem(this.storageKey);
-        if (saved) {
-            try {
-                this.scores = JSON.parse(saved) || [];
-                return this.scores;
-            } catch (e) {
-                console.warn('ScoreManager: повреждённые данные, используем файл', e);
-            }
-        }
-
         try {
-            const res = await fetch(this.path, { cache: 'no-cache' });
-            if (!res.ok) throw new Error(res.statusText);
-            const data = await res.json();
-            this.scores = Array.isArray(data) ? data : [];
-            this.save();
+            const saved = localStorage.getItem(this.storageKey);
+            if (!saved) {
+                this.scores = [];
+                return this.scores;
+            }
+
+            this.scores = JSON.parse(saved) || [];
         } catch (err) {
-            console.warn('ScoreManager: не удалось загрузить файл рейтинга, стартуем с пустым списком', err);
+            console.warn('ScoreManager: повреждённые данные в localStorage, стартуем с пустым списком', err);
             this.scores = [];
-            this.save();
         }
 
         return this.scores;
@@ -59,7 +48,7 @@ class ScoreManager {
         try {
             localStorage.setItem(this.storageKey, JSON.stringify(this.scores));
         } catch (e) {
-            console.warn('ScoreManager: не удалось сохранить результаты', e);
+            console.warn('ScoreManager: не удалось сохранить результаты в localStorage', e);
         }
     }
 }

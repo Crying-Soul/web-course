@@ -36,6 +36,7 @@ class GameManager {
         this.physicsManager = null;
         this.eventManager = null;
         this.mapManager = null;
+        this.soundManager = null;
 
         // Новые менеджеры
         this.spawnerManager = new SpawnerManager();
@@ -67,6 +68,7 @@ class GameManager {
         this.physicsManager = managers.physicsManager;
         this.eventManager = managers.eventManager;
         this.mapManager = managers.mapManager;
+        this.soundManager = managers.soundManager;
 
         console.log('GameManager: Инициализирован');
     }
@@ -491,6 +493,9 @@ class GameManager {
             // Применяем физику к игроку
             if (this.player) {
                 this.physicsManager.applyPhysics(this.player, dt);
+                if (typeof this.player.afterPhysicsUpdate === 'function') {
+                    this.player.afterPhysicsUpdate(dt, game);
+                }
             }
 
             // Применяем физику к сущностям

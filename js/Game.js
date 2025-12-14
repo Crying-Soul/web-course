@@ -19,6 +19,7 @@ class Game {
         this.mapManager = new MapManager(this.spriteManager);
         this.physicsManager = null; // Инициализируется после загрузки карты
         this.gameManager = new GameManager();
+        this.soundManager = new SoundManager();
         
         // Камера
         this.camera = new Camera(this.viewWidth, this.viewHeight);
@@ -55,7 +56,8 @@ class Game {
         this.gameManager.init({
             physicsManager: this.physicsManager,
             eventManager: this.eventManager,
-            mapManager: this.mapManager
+            mapManager: this.mapManager,
+            soundManager: this.soundManager
         });
         
         // Создаём игрока в центре карты
@@ -77,6 +79,9 @@ class Game {
     async loadResources() {
         console.log('Game: Загрузка ресурсов...');
         
+        // Загружаем звуки
+        await this.soundManager.loadAll();
+
         // Загружаем тайлсет
         await this.spriteManager.loadTileset('tiles.json');
         

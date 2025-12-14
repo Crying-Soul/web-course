@@ -8,6 +8,8 @@ class SpriteManager {
         this.sprites = new Map();
         // Данные тайлсета
         this.tilesetData = null;
+        // Метаданные тайлов по id (0-based из tiles.json)
+        this.tileDataById = new Map();
         // Флаг готовности
         this.ready = false;
     }
@@ -52,6 +54,7 @@ class SpriteManager {
                     width: tileData.imagewidth,
                     height: tileData.imageheight
                 });
+                this.tileDataById.set(tileData.id, tileData);
                 resolve();
             };
 
@@ -94,5 +97,37 @@ class SpriteManager {
             width: this.tilesetData.tilewidth,
             height: this.tilesetData.tileheight
         };
+    }
+
+    /**
+     * Возвращает исходный объект тайла по ID из карты (1-based, 0 = пусто)
+     * @param {number} mapTileId
+     * @returns {Object|null}
+     */
+    getTileDataByMapId(mapTileId) {
+        if (mapTileId <= 0) return null;
+        return this.tileDataById.get(mapTileId - 1) || null;
+    }
+
+    /**
+     * Получает значение свойства тайла по имени
+     * @param {number} mapTileId - ID тайла из данных карты (1-based)
+     * @param {string} propName
+     * @param {*} defaultValue
+     */
+    getTileProperty(mapTileId, propName, defaultValue = null) {
+        const tileData = this.getTileDataByMapId(mapTileId);
+        if (!tileData || !tileData.properties) return defaultValue;
+        const prop = tileData.properties.find(p => p.name === propName);
+        return prop ? prop.value : defaultValue;
+    }
+
+    /**
+     * Удобный доступ к типу тайла (свойство "type")
+     * @param {number} mapTileId - ID тайла из карты (1-based)
+     * @returns {string|null}
+     */
+    getTileType(mapTileId) {
+        return this.getTileProperty(mapTileId, 'type', null);
     }
 }
