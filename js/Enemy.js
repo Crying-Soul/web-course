@@ -6,7 +6,7 @@ class Enemy extends Entity {
     constructor(config = {}) {
         // Конфигурация спрайта врага (пока используем тот же что и игрок)
         const enemySpriteConfig = {
-            imagePath: config.spritePath || 'images/npc/BestiaryGirl_Default.png',
+            imagePath: config.spritePath || 'images/npc/FuryPlayer.png',
             frameWidth: 40,
             frameHeight: 55,
             offsetX: 0,

@@ -8,9 +8,9 @@
  "margin":0,
  "name":"tiles",
  "spacing":0,
- "tilecount":155,
+ "tilecount":156,
  "tiledversion":"1.11.2",
- "tileheight":16,
+ "tileheight":34,
  "tiles":[
         {
          "id":0,
@@ -941,8 +941,14 @@
          "image":"images\/base\/wood-xxxx.png",
          "imageheight":16,
          "imagewidth":16
+        }, 
+        {
+         "id":156,
+         "image":"images\/base\/Item_3985.png",
+         "imageheight":34,
+         "imagewidth":34
         }],
- "tilewidth":16,
+ "tilewidth":34,
  "type":"tileset",
  "version":"1.10"
 }
