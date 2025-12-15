@@ -623,7 +623,7 @@ class GameManager {
     }
 
     /**
-     * Отрисовка статистики игры с улучшенным дизайном
+     * Отрисовка статистики игры
      * @param {CanvasRenderingContext2D} ctx
      */
     renderStatsUI(ctx) {
@@ -728,7 +728,7 @@ class GameManager {
     }
 
     /**
-     * Отрисовка kill streak с улучшенными эффектами
+     * Отрисовка индикатора kill streak
      * @param {CanvasRenderingContext2D} ctx
      * @param {number} width
      */

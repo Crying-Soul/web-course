@@ -404,7 +404,7 @@ class Enemy extends Entity {
     }
 
     /**
-     * Отрисовка полоски здоровья с улучшенными эффектами
+     * Отрисовка полоски здоровья врага
      * @param {CanvasRenderingContext2D} ctx
      * @param {Camera} camera
      */

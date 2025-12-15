@@ -148,7 +148,7 @@ class Item {
     }
 
     /**
-     * Отрисовка предмета на земле с улучшенными эффектами
+     * Отрисовка предмета на земле
      * @param {CanvasRenderingContext2D} ctx
      * @param {Camera} camera
      */

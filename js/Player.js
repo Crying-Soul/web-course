@@ -42,7 +42,7 @@ class Player extends Entity {
                 }
             }
             ,
-            smooth: true // улучшить качество отрисовки спрайта игрока
+            smooth: true // Включает сглаживание спрайтов игрока
         };
         
         // Объединяем с переданной конфигурацией
@@ -816,7 +816,7 @@ class Player extends Entity {
     
     
     /**
-     * Отрисовка UI игрока (HP и Mana бары с улучшенными эффектами)
+     * Отрисовка UI игрока (полосы HP и Mana)
      * @param {CanvasRenderingContext2D} ctx
      */
     renderUI(ctx) {
@@ -955,7 +955,7 @@ class Player extends Entity {
         
         ctx.restore();
 
-        // Активные баффы (слева сверху) с улучшенным дизайном
+        // Активные баффы (левая верхняя панель)
         const buffSize = 28;
         const buffWidth = 85;
         const buffStartX = 12;

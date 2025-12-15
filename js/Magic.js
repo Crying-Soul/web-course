@@ -148,7 +148,7 @@ class MagicProjectile {
         ctx.arc(screenX, screenY, glowRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // След с улучшенным градиентом
+        // След с градиентом
         for (let i = 0; i < this.trail.length; i++) {
             const p = this.trail[i];
             const t = i / this.trail.length;

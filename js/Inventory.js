@@ -89,7 +89,7 @@ class Inventory {
     }
 
     /**
-     * Отрисовка инвентаря (UI) с улучшенным дизайном
+     * Отрисовка интерфейса инвентаря
      * @param {CanvasRenderingContext2D} ctx
      */
     render(ctx) {
@@ -159,7 +159,7 @@ class Inventory {
                     const drawY = Math.round(y + (slotSize - drawH) / 2);
                     ctx.drawImage(item.image, drawX, drawY, drawW, drawH);
                 } else {
-                    // Магическая иконка с улучшенным свечением
+                    // Иконка заклинания со свечением
                     const cx = x + slotSize / 2;
                     const cy = y + slotSize / 2;
                     const r = (slotSize - 12) / 2;

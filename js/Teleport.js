@@ -228,7 +228,7 @@ class Teleport {
         ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
         ctx.fill();
 
-        // Частицы с улучшенным эффектом
+        // Частицы эффекта телепортации
         for (const p of this.particles) {
             const px = p.x - camera.x;
             const py = p.y - camera.y;
