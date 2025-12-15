@@ -135,54 +135,117 @@ class Item {
     }
 
     /**
-     * Отрисовка предмета на земле
+     * Преобразует hex цвет в rgba
+     * @param {string} hex
+     * @param {number} alpha
+     * @returns {string}
+     */
+    hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    /**
+     * Отрисовка предмета на земле с улучшенными эффектами
      * @param {CanvasRenderingContext2D} ctx
      * @param {Camera} camera
      */
     render(ctx, camera) {
         if (!this.active) return;
         
+        const time = Date.now() / 1000;
         const bobOffset = Math.sin(this.bobTimer) * this.bobHeight;
-        // Выравниваем по пиксельной сетке, чтобы не было смаза на увеличении
         const screenX = Math.round(this.x - camera.x);
         const screenY = Math.round(this.y - camera.y + bobOffset);
+        const centerX = screenX + this.width / 2;
+        const centerY = screenY + this.height / 2;
         
+        // Цвет свечения на основе элемента
+        const glowColor = this.trailColors?.[0] || this.iconColor || '#ffff00';
+        const pulseIntensity = 0.5 + Math.sin(time * 3) * 0.3;
+        
+        ctx.save();
+        
+        // Внешнее свечение (большое размытое)
+        const outerGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, this.width * 1.8);
+        outerGlow.addColorStop(0, this.hexToRgba(glowColor, 0.25 * pulseIntensity));
+        outerGlow.addColorStop(0.5, this.hexToRgba(glowColor, 0.1 * pulseIntensity));
+        outerGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = outerGlow;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, this.width * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Внутреннее свечение (яркое)
+        const innerGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, this.width * 0.9);
+        innerGlow.addColorStop(0, this.hexToRgba(glowColor, 0.4 * pulseIntensity));
+        innerGlow.addColorStop(0.6, this.hexToRgba(glowColor, 0.2 * pulseIntensity));
+        innerGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = innerGlow;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, this.width * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Вращающиеся частицы вокруг предмета
+        const particleCount = 3;
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (time * 2 + (i / particleCount) * Math.PI * 2) % (Math.PI * 2);
+            const dist = this.width * 0.7 + Math.sin(time * 4 + i) * 2;
+            const px = centerX + Math.cos(angle) * dist;
+            const py = centerY + Math.sin(angle) * dist * 0.5; // Эллиптическая орбита
+            const pSize = 1.5 + Math.sin(time * 5 + i) * 0.5;
+            
+            ctx.fillStyle = this.hexToRgba(glowColor, 0.7);
+            ctx.beginPath();
+            ctx.arc(px, py, pSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Рисуем сам предмет
         if (this.imageLoaded) {
-            // Сохраняем старые параметры сглаживания и временно включаем при необходимости
             const prevSmoothing = ctx.imageSmoothingEnabled;
             const prevQuality = ctx.imageSmoothingQuality || 'low';
-            try {
-                // Если предмет пиксельный — выключаем сглаживание для чётких краёв
-                if (this.pixelPerfect) {
-                    ctx.imageSmoothingEnabled = false;
-                } else {
-                    ctx.imageSmoothingEnabled = !!this.smooth;
-                    if (this.smooth) ctx.imageSmoothingQuality = 'high';
-                }
-            } catch (e) {}
+            
+            if (this.pixelPerfect) {
+                ctx.imageSmoothingEnabled = false;
+            } else {
+                ctx.imageSmoothingEnabled = !!this.smooth;
+                if (this.smooth) ctx.imageSmoothingQuality = 'high';
+            }
 
             const drawW = Math.round(this.width);
             const drawH = Math.round(this.height);
             ctx.drawImage(this.image, screenX, screenY, drawW, drawH);
 
-            // Восстанавливаем сглаживание
-            try {
-                ctx.imageSmoothingEnabled = prevSmoothing;
-                ctx.imageSmoothingQuality = prevQuality;
-            } catch (e) {}
+            ctx.imageSmoothingEnabled = prevSmoothing;
+            ctx.imageSmoothingQuality = prevQuality;
         } else {
-            // Заглушка
-            ctx.fillStyle = '#ffaa00';
-            ctx.fillRect(screenX, screenY, this.width, this.height);
+            // Заглушка - магический орб
+            const orbGrad = ctx.createRadialGradient(centerX, centerY - 2, 0, centerX, centerY, this.width / 2);
+            orbGrad.addColorStop(0, '#ffffff');
+            orbGrad.addColorStop(0.3, glowColor);
+            orbGrad.addColorStop(1, this.hexToRgba(glowColor, 0.3));
+            ctx.fillStyle = orbGrad;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, this.width / 2.5, 0, Math.PI * 2);
+            ctx.fill();
         }
         
-        // Свечение
-        ctx.save();
-        ctx.globalAlpha = 0.3 + Math.sin(this.bobTimer) * 0.2;
-        ctx.fillStyle = '#ffff00';
+        // Блик на предмете
+        ctx.globalAlpha = 0.3;
+        const highlight = ctx.createRadialGradient(
+            centerX - this.width * 0.15, centerY - this.height * 0.2, 0,
+            centerX, centerY, this.width * 0.4
+        );
+        highlight.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+        highlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = highlight;
         ctx.beginPath();
-        ctx.arc(screenX + this.width / 2, screenY + this.height / 2, this.width, 0, Math.PI * 2);
+        ctx.arc(centerX - this.width * 0.1, centerY - this.height * 0.15, this.width * 0.25, 0, Math.PI * 2);
         ctx.fill();
+        
         ctx.restore();
     }
 

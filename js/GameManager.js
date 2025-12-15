@@ -41,12 +41,13 @@ class GameManager {
         // Новые менеджеры
         this.spawnerManager = new SpawnerManager();
         this.teleportManager = new TeleportManager();
+        this.particleSystem = new ParticleSystem();
 
         // Текущая карта
         this.currentMapPath = '';
 
-        // Режим отладки (по умолчанию включен для тестирования)
-        this.debug = true;
+        // Режим отладки (по умолчанию выключен)
+        this.debug = false;
 
         // Система очков
         this.scoreMultiplier = 1.0;
@@ -379,9 +380,14 @@ class GameManager {
             this.stats.maxKillStreak = this.stats.killStreak;
         }
 
-        // Создаём всплывающий текст с очками
+        // Эффект частиц при смерти
+        const deathX = enemy.x + enemy.displayWidth / 2;
+        const deathY = enemy.y + enemy.displayHeight / 2;
+        this.particleSystem.createDeathEffect(deathX, deathY, '#ff4444');
+        
+        // Дополнительный эффект для стриков
         if (this.stats.killStreak >= 3) {
-            console.log(`Kill Streak: ${this.stats.killStreak}! (+${totalScore} очков)`);
+            this.particleSystem.createExplosionEffect(deathX, deathY, 30, ['#ffaa00', '#ff6600', '#ffffff']);
         }
 
         // Дроп заклинания с врага
@@ -507,6 +513,8 @@ class GameManager {
         this.items = this.items.filter(item => item.active);
         this.projectiles = this.projectiles.filter(p => p.active);
 
+        // Обновляем систему частиц
+        this.particleSystem.update(dt);
     }
 
     /**
@@ -589,6 +597,9 @@ class GameManager {
             }
         }
 
+        // Отрисовываем частицы (поверх всего)
+        this.particleSystem.render(ctx, camera);
+
         // Отладочная информация спавнеров
         if (this.debug) {
             this.spawnerManager.renderDebug(ctx, camera);
@@ -612,80 +623,174 @@ class GameManager {
     }
 
     /**
-     * Отрисовка статистики игры
+     * Отрисовка статистики игры с улучшенным дизайном
      * @param {CanvasRenderingContext2D} ctx
      */
     renderStatsUI(ctx) {
         const width = ctx.canvas.width;
-
-        // Верхняя панель статистики (по центру)
-        const panelWidth = 280;
+        const panelWidth = 300;
+        const panelHeight = 55;
         const panelX = (width - panelWidth) / 2;
-        const panelY = 10;
+        const panelY = 8;
+        const cornerRadius = 8;
 
-        // Фон панели
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(panelX, panelY, panelWidth, 50);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.save();
+
+        // Тень панели
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        this.roundRect(ctx, panelX + 3, panelY + 3, panelWidth, panelHeight, cornerRadius);
+        ctx.fill();
+
+        // Фон панели с градиентом
+        const bgGrad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelHeight);
+        bgGrad.addColorStop(0, 'rgba(30, 35, 50, 0.92)');
+        bgGrad.addColorStop(1, 'rgba(15, 20, 35, 0.92)');
+        ctx.fillStyle = bgGrad;
+        this.roundRect(ctx, panelX, panelY, panelWidth, panelHeight, cornerRadius);
+        ctx.fill();
+
+        // Рамка
+        ctx.strokeStyle = 'rgba(100, 120, 160, 0.5)';
         ctx.lineWidth = 1;
-        ctx.strokeRect(panelX, panelY, panelWidth, 50);
+        this.roundRect(ctx, panelX, panelY, panelWidth, panelHeight, cornerRadius);
+        ctx.stroke();
+
+        // Разделители
+        ctx.strokeStyle = 'rgba(100, 120, 160, 0.3)';
+        ctx.beginPath();
+        ctx.moveTo(panelX + 100, panelY + 8);
+        ctx.lineTo(panelX + 100, panelY + panelHeight - 8);
+        ctx.moveTo(panelX + 200, panelY + 8);
+        ctx.lineTo(panelX + 200, panelY + panelHeight - 8);
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
         // Счёт
-        ctx.fillStyle = '#ffcc00';
-        ctx.font = 'bold 18px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(`⭐ ${this.stats.score}`, panelX + 60, panelY + 22);
+        ctx.fillStyle = '#ffdd44';
+        ctx.font = 'bold 20px Arial';
+        ctx.shadowColor = 'rgba(255, 200, 0, 0.5)';
+        ctx.shadowBlur = 8;
+        ctx.fillText(`${this.stats.score}`, panelX + 50, panelY + 22);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#aab8d0';
+        ctx.font = '10px Arial';
+        ctx.fillText('ОЧКИ', panelX + 50, panelY + 42);
 
-        // Количество врагов
-        ctx.fillStyle = '#ff6666';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText(`👹 ${this.entities.length}`, panelX + 140, panelY + 22);
+        // Враги
+        ctx.fillStyle = '#ff7777';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText(`${this.entities.length}`, panelX + 150, panelY + 22);
+        ctx.fillStyle = '#aab8d0';
+        ctx.font = '10px Arial';
+        ctx.fillText('ВРАГИ', panelX + 150, panelY + 42);
 
         // Убийства
-        ctx.fillStyle = '#66ff66';
-        ctx.fillText(`💀 ${this.stats.kills}`, panelX + 220, panelY + 22);
+        ctx.fillStyle = '#77ff77';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText(`${this.stats.kills}`, panelX + 250, panelY + 22);
+        ctx.fillStyle = '#aab8d0';
+        ctx.font = '10px Arial';
+        ctx.fillText('УБИЙСТВА', panelX + 250, panelY + 42);
 
-        // Время
-        ctx.fillStyle = '#aaaaaa';
-        ctx.font = '12px Arial';
+        // Время (маленькое, справа сверху от панели)
         const minutes = Math.floor(this.stats.time / 60);
         const seconds = Math.floor(this.stats.time % 60);
-        ctx.fillText(`⏱ ${minutes}:${seconds.toString().padStart(2, '0')}`, panelX + panelWidth / 2, panelY + 42);
+        ctx.fillStyle = 'rgba(150, 160, 180, 0.8)';
+        ctx.font = '11px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${minutes}:${seconds.toString().padStart(2, '0')}`, panelX + panelWidth - 8, panelY - 2);
 
-        // Kill Streak (если есть)
+        ctx.restore();
+
+        // Kill Streak
         if (this.stats.killStreak >= 3) {
             this.renderKillStreak(ctx, width);
         }
     }
 
     /**
-     * Отрисовка kill streak
+     * Вспомогательный метод для рисования скруглённых прямоугольников
+     */
+    roundRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+    }
+
+    /**
+     * Отрисовка kill streak с улучшенными эффектами
      * @param {CanvasRenderingContext2D} ctx
      * @param {number} width
      */
     renderKillStreak(ctx, width) {
-        const streakText = `🔥 KILL STREAK: ${this.stats.killStreak}x 🔥`;
         const x = width / 2;
-        const y = 80;
-
+        const y = 75;
+        const streak = this.stats.killStreak;
+        
         // Пульсирующий эффект
-        const pulse = Math.sin(Date.now() / 100) * 0.2 + 0.8;
-
-        // Фон
-        ctx.fillStyle = `rgba(255, 100, 0, ${0.4 * pulse})`;
-        ctx.fillRect(x - 100, y - 20, 200, 35);
-
-        // Текст
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${16 + Math.floor(this.stats.killStreak / 3)}px Arial`;
+        const time = Date.now() / 1000;
+        const pulse = Math.sin(time * 6) * 0.15 + 0.85;
+        const shake = Math.sin(time * 20) * (streak > 10 ? 2 : 1);
+        
+        ctx.save();
+        ctx.translate(shake, 0);
+        
+        // Размер зависит от стрика
+        const baseSize = 14 + Math.min(streak / 2, 6);
+        const panelWidth = 160 + streak * 4;
+        const panelHeight = 40;
+        
+        // Внешнее свечение
+        const glowGrad = ctx.createRadialGradient(x, y, 0, x, y, panelWidth / 1.5);
+        const glowIntensity = 0.3 + Math.min(streak / 20, 0.3);
+        glowGrad.addColorStop(0, `rgba(255, 150, 50, ${glowIntensity * pulse})`);
+        glowGrad.addColorStop(0.5, `rgba(255, 100, 0, ${glowIntensity * 0.5 * pulse})`);
+        glowGrad.addColorStop(1, 'rgba(255, 50, 0, 0)');
+        ctx.fillStyle = glowGrad;
+        ctx.fillRect(x - panelWidth, y - panelHeight, panelWidth * 2, panelHeight * 2);
+        
+        // Фон панели
+        const bgGrad = ctx.createLinearGradient(x - panelWidth / 2, y - 20, x + panelWidth / 2, y + 20);
+        bgGrad.addColorStop(0, `rgba(180, 60, 0, ${0.85 * pulse})`);
+        bgGrad.addColorStop(0.5, `rgba(220, 100, 20, ${0.9 * pulse})`);
+        bgGrad.addColorStop(1, `rgba(180, 60, 0, ${0.85 * pulse})`);
+        ctx.fillStyle = bgGrad;
+        this.roundRect(ctx, x - panelWidth / 2, y - panelHeight / 2, panelWidth, panelHeight, 6);
+        ctx.fill();
+        
+        // Огненная рамка
+        ctx.strokeStyle = `rgba(255, 200, 100, ${pulse})`;
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, x - panelWidth / 2, y - panelHeight / 2, panelWidth, panelHeight, 6);
+        ctx.stroke();
+        
+        // Текст стрика
         ctx.textAlign = 'center';
-        ctx.fillText(streakText, x, y);
-
-        // Бонусные очки
-        const bonus = Math.floor(this.stats.killStreak * 0.5);
-        ctx.fillStyle = '#ffff00';
-        ctx.font = '12px Arial';
-        ctx.fillText(`+${bonus} bonus per kill`, x, y + 16);
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${baseSize}px Arial`;
+        ctx.shadowColor = 'rgba(255, 100, 0, 0.8)';
+        ctx.shadowBlur = 10;
+        ctx.fillText(`🔥 STREAK x${streak} 🔥`, x, y - 3);
+        ctx.shadowBlur = 0;
+        
+        // Бонус
+        const bonus = Math.floor(streak * 0.5);
+        ctx.fillStyle = '#ffee88';
+        ctx.font = '11px Arial';
+        ctx.fillText(`+${bonus} бонус за убийство`, x, y + 13);
+        
+        ctx.restore();
     }
 
     /**
@@ -695,42 +800,81 @@ class GameManager {
     renderDebugInfo(ctx) {
         if (!this.debug) return;
 
-        // Фон для текста
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(50, 70, 200, 180);
-
-        ctx.fillStyle = '#00ff00';
-        ctx.font = '10px monospace';
-        ctx.textAlign = 'left';
-
+        const x = 50;
+        const y = 70;
+        const width = 220;
+        const lineHeight = 14;
+        
         const spawnerStats = this.spawnerManager.getStats();
 
-        const info = [
-            `State: ${this.state}`,
-            `Enemies: ${this.entities.length}`,
-            `Items: ${this.items.length}`,
-            `Projectiles: ${this.projectiles.length}`,
-            `Kills: ${this.stats.kills} (Total: ${this.stats.totalKills})`,
-            `Score: ${this.stats.score}`,
-            `Kill Streak: ${this.stats.killStreak} (Max: ${this.stats.maxKillStreak})`,
-            `Time: ${this.stats.time.toFixed(1)}s`,
-            `--- Spawners ---`,
-            `Active: ${spawnerStats.activeSpawners}/${spawnerStats.spawnerCount}`,
-            `Alive from spawners: ${spawnerStats.totalAlive}`,
+        const sections = [
+            { title: 'GAME STATE', items: [
+                { label: 'State', value: this.state, color: '#00ff88' },
+                { label: 'Time', value: `${this.stats.time.toFixed(1)}s`, color: '#88ff88' },
+                { label: 'Score', value: this.stats.score, color: '#ffff00' },
+            ]},
+            { title: 'ENTITIES', items: [
+                { label: 'Enemies', value: this.entities.length, color: '#ff6666' },
+                { label: 'Items', value: this.items.length, color: '#66ffff' },
+                { label: 'Projectiles', value: this.projectiles.length, color: '#ff66ff' },
+            ]},
+            { title: 'KILLS', items: [
+                { label: 'Session', value: this.stats.kills, color: '#ffaa00' },
+                { label: 'Total', value: this.stats.totalKills, color: '#ffaa00' },
+                { label: 'Streak', value: `${this.stats.killStreak} (max: ${this.stats.maxKillStreak})`, color: '#ff6600' },
+            ]},
+            { title: 'SPAWNERS', items: [
+                { label: 'Active', value: `${spawnerStats.activeSpawners}/${spawnerStats.spawnerCount}`, color: '#aaaaff' },
+                { label: 'Alive', value: spawnerStats.totalAlive, color: '#aaaaff' },
+            ]},
         ];
 
         if (this.player) {
-            info.push(
-                `--- Player ---`,
-                `Pos: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})`,
-                `HP: ${this.player.health}/${this.player.maxHealth}`,
-                `Mana: ${this.player.mana.toFixed(0)}/${this.player.maxMana}`,
-                `OnGround: ${this.player.onGround}`
-            );
+            sections.push({ title: 'PLAYER', items: [
+                { label: 'Position', value: `(${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})`, color: '#88aaff' },
+                { label: 'HP', value: `${this.player.health}/${this.player.maxHealth}`, color: '#ff4444' },
+                { label: 'Mana', value: `${this.player.mana.toFixed(0)}/${this.player.maxMana}`, color: '#4488ff' },
+                { label: 'OnGround', value: this.player.onGround ? 'YES' : 'NO', color: this.player.onGround ? '#00ff00' : '#ff0000' },
+            ]});
         }
 
-        info.forEach((text, i) => {
-            ctx.fillText(text, 55, 85 + i * 12);
+        // Подсчёт высоты
+        let totalLines = 0;
+        sections.forEach(s => { totalLines += 1 + s.items.length; });
+        const height = totalLines * lineHeight + 16;
+
+        // Фон
+        ctx.fillStyle = 'rgba(10, 15, 25, 0.92)';
+        this.roundRect(ctx, x, y, width, height, 6);
+        ctx.fill();
+        
+        // Рамка
+        ctx.strokeStyle = 'rgba(0, 255, 100, 0.4)';
+        ctx.lineWidth = 1;
+        this.roundRect(ctx, x, y, width, height, 6);
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        
+        let currentY = y + 8;
+        
+        sections.forEach(section => {
+            // Заголовок секции
+            ctx.fillStyle = '#00ff88';
+            ctx.font = 'bold 9px monospace';
+            ctx.fillText(`═══ ${section.title} ═══`, x + 8, currentY);
+            currentY += lineHeight;
+            
+            // Элементы секции
+            ctx.font = '10px monospace';
+            section.items.forEach(item => {
+                ctx.fillStyle = '#888888';
+                ctx.fillText(`${item.label}:`, x + 12, currentY);
+                ctx.fillStyle = item.color;
+                ctx.fillText(String(item.value), x + 90, currentY);
+                currentY += lineHeight;
+            });
         });
     }
 

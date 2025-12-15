@@ -694,7 +694,15 @@ class Player extends Entity {
                 // Пробуем добавить в инвентарь
                 if (this.inventory.addItem(item)) {
                     item.active = false;
-                    console.log(`Player: Подобран ${item.name}`);
+                    
+                    // Эффект частиц при подборе
+                    if (game.gameManager.particleSystem) {
+                        const pickupX = item.x + item.width / 2;
+                        const pickupY = item.y + item.height / 2;
+                        game.gameManager.particleSystem.createPickupEffect(
+                            pickupX, pickupY, item.iconColor || '#ffff00'
+                        );
+                    }
                 }
             }
         }
@@ -808,90 +816,228 @@ class Player extends Entity {
     
     
     /**
-     * Отрисовка UI игрока (HP бар)
+     * Отрисовка UI игрока (HP и Mana бары с улучшенными эффектами)
      * @param {CanvasRenderingContext2D} ctx
      */
     renderUI(ctx) {
-        // HP бар в верхней части экрана справа
         const barWidth = 150;
-        const barHeight = 16;
+        const barHeight = 18;
         const x = ctx.canvas.width - barWidth - 50;
         const y = 15;
+        const cornerRadius = 4;
         
-        // Фон
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(x - 5, y - 5, barWidth + 10, barHeight + 10);
+        ctx.save();
+        
+        // === HP БАР ===
+        const hpPercent = this.health / this.maxHealth;
+        
+        // Фоновая панель с тенью
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.roundRect(ctx, x - 6, y - 4, barWidth + 32, barHeight + 8, cornerRadius + 2);
+        ctx.fill();
+        
+        ctx.fillStyle = 'rgba(20, 15, 25, 0.9)';
+        this.roundRect(ctx, x - 4, y - 2, barWidth + 28, barHeight + 4, cornerRadius);
+        ctx.fill();
         
         // Фон полоски
-        ctx.fillStyle = '#333333';
-        ctx.fillRect(x, y, barWidth, barHeight);
+        ctx.fillStyle = 'rgba(60, 30, 30, 0.9)';
+        this.roundRect(ctx, x, y, barWidth, barHeight, cornerRadius - 1);
+        ctx.fill();
         
-        // HP
-        const hpPercent = this.health / this.maxHealth;
-        const hpColor = hpPercent > 0.5 ? '#ff3333' : hpPercent > 0.25 ? '#ff6633' : '#ff0000';
-        ctx.fillStyle = hpColor;
-        ctx.fillRect(x, y, barWidth * hpPercent, barHeight);
+        // HP градиент
+        if (hpPercent > 0) {
+            const hpGradient = ctx.createLinearGradient(x, y, x, y + barHeight);
+            if (hpPercent > 0.5) {
+                hpGradient.addColorStop(0, '#ff6666');
+                hpGradient.addColorStop(0.5, '#ff3333');
+                hpGradient.addColorStop(1, '#cc2222');
+            } else if (hpPercent > 0.25) {
+                hpGradient.addColorStop(0, '#ff9933');
+                hpGradient.addColorStop(0.5, '#ff6633');
+                hpGradient.addColorStop(1, '#cc4422');
+            } else {
+                hpGradient.addColorStop(0, '#ff4444');
+                hpGradient.addColorStop(0.5, '#cc0000');
+                hpGradient.addColorStop(1, '#880000');
+            }
+            
+            ctx.fillStyle = hpGradient;
+            this.roundRect(ctx, x, y, barWidth * hpPercent, barHeight, cornerRadius - 1);
+            ctx.fill();
+            
+            // Блик сверху
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            this.roundRect(ctx, x, y, barWidth * hpPercent, barHeight / 2, cornerRadius - 1);
+            ctx.fill();
+        }
         
-        // Текст
+        // Эффект урона - пульсация
+        if (this.isDamaged) {
+            const pulseAlpha = Math.sin(this.damageFlashTimer * 20) * 0.3 + 0.3;
+            ctx.strokeStyle = `rgba(255, 100, 100, ${pulseAlpha})`;
+            ctx.lineWidth = 3;
+            this.roundRect(ctx, x - 2, y - 2, barWidth + 4, barHeight + 4, cornerRadius);
+            ctx.stroke();
+        }
+        
+        // Текст HP
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px Arial';
+        ctx.font = 'bold 11px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(`${Math.ceil(this.health)} / ${this.maxHealth}`, x + barWidth / 2, y + 12);
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 2;
+        ctx.fillText(`${Math.ceil(this.health)} / ${this.maxHealth}`, x + barWidth / 2, y + barHeight / 2);
+        ctx.shadowBlur = 0;
         
         // Иконка сердца
-        ctx.fillStyle = '#ff0000';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'right';
-        ctx.fillText('❤', x - 8, y + 13);
+        ctx.fillStyle = '#ff4444';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('❤', x + barWidth + 14, y + barHeight / 2 + 1);
         
         // Рамка
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, barWidth, barHeight);
+        ctx.strokeStyle = 'rgba(255, 100, 100, 0.5)';
+        ctx.lineWidth = 1;
+        this.roundRect(ctx, x, y, barWidth, barHeight, cornerRadius - 1);
+        ctx.stroke();
 
-        // Мана под HP
-        const manaY = y + barHeight + 12;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(x - 5, manaY - 5, barWidth + 10, barHeight + 10);
-
-        ctx.fillStyle = '#1c2d5c';
-        ctx.fillRect(x, manaY, barWidth, barHeight);
-
+        // === MANA БАР ===
+        const manaY = y + barHeight + 10;
         const manaPercent = this.mana / this.maxMana;
-        const manaColor = '#4bc8ff';
-        ctx.fillStyle = manaColor;
-        ctx.fillRect(x, manaY, barWidth * manaPercent, barHeight);
+        
+        // Фон
+        ctx.fillStyle = 'rgba(20, 25, 45, 0.9)';
+        this.roundRect(ctx, x - 4, manaY - 2, barWidth + 28, barHeight + 4, cornerRadius);
+        ctx.fill();
+        
+        ctx.fillStyle = 'rgba(20, 40, 80, 0.9)';
+        this.roundRect(ctx, x, manaY, barWidth, barHeight, cornerRadius - 1);
+        ctx.fill();
 
+        // Mana градиент
+        if (manaPercent > 0) {
+            const manaGradient = ctx.createLinearGradient(x, manaY, x, manaY + barHeight);
+            manaGradient.addColorStop(0, '#66ccff');
+            manaGradient.addColorStop(0.5, '#4bc8ff');
+            manaGradient.addColorStop(1, '#2090cc');
+            
+            ctx.fillStyle = manaGradient;
+            this.roundRect(ctx, x, manaY, barWidth * manaPercent, barHeight, cornerRadius - 1);
+            ctx.fill();
+            
+            // Блик
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            this.roundRect(ctx, x, manaY, barWidth * manaPercent, barHeight / 2, cornerRadius - 1);
+            ctx.fill();
+        }
+
+        // Текст Mana
         ctx.fillStyle = '#e0f6ff';
-        ctx.font = 'bold 12px Arial';
+        ctx.font = 'bold 11px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(`${Math.floor(this.mana)} / ${this.maxMana}`, x + barWidth / 2, manaY + 12);
-        ctx.strokeStyle = '#4bc8ff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, manaY, barWidth, barHeight);
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 2;
+        ctx.fillText(`${Math.floor(this.mana)} / ${this.maxMana}`, x + barWidth / 2, manaY + barHeight / 2);
+        ctx.shadowBlur = 0;
+        
+        // Иконка маны
+        ctx.fillStyle = '#4bc8ff';
+        ctx.font = '14px Arial';
+        ctx.fillText('✦', x + barWidth + 14, manaY + barHeight / 2 + 1);
+        
+        // Рамка
+        ctx.strokeStyle = 'rgba(75, 200, 255, 0.5)';
+        ctx.lineWidth = 1;
+        this.roundRect(ctx, x, manaY, barWidth, barHeight, cornerRadius - 1);
+        ctx.stroke();
+        
+        ctx.restore();
 
-        // Активные баффы (слева сверху)
-        const buffSize = 26;
+        // Активные баффы (слева сверху) с улучшенным дизайном
+        const buffSize = 28;
+        const buffWidth = 85;
         const buffStartX = 12;
         const buffStartY = 12;
+        
         for (let i = 0; i < this.buffs.length; i++) {
             const buff = this.buffs[i];
             const bx = buffStartX;
-            const by = buffStartY + i * (buffSize + 6);
-            ctx.fillStyle = 'rgba(20, 26, 52, 0.75)';
-            ctx.fillRect(bx, by, buffSize * 2.8, buffSize);
-            ctx.strokeStyle = '#6cf0ff';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(bx, by, buffSize * 2.8, buffSize);
-
-            ctx.fillStyle = '#6cf0ff';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'left';
-            ctx.fillText(`${buff.id.toUpperCase()} x${buff.stacks}`, bx + 6, by + 16);
-
-            ctx.fillStyle = 'rgba(108, 240, 255, 0.35)';
+            const by = buffStartY + i * (buffSize + 5);
             const pct = Math.min(buff.timeLeft / (buff.duration || buff.timeLeft), 1);
-            ctx.fillRect(bx, by + buffSize - 6, (buffSize * 2.8) * pct, 4);
+            
+            // Фон с градиентом
+            const buffGradient = ctx.createLinearGradient(bx, by, bx + buffWidth, by);
+            buffGradient.addColorStop(0, 'rgba(30, 40, 70, 0.85)');
+            buffGradient.addColorStop(1, 'rgba(20, 30, 50, 0.7)');
+            ctx.fillStyle = buffGradient;
+            this.roundRect(ctx, bx, by, buffWidth, buffSize, 4);
+            ctx.fill();
+            
+            // Прогресс-бар снизу
+            if (pct > 0) {
+                const progressGradient = ctx.createLinearGradient(bx, by + buffSize - 4, bx + buffWidth * pct, by + buffSize);
+                progressGradient.addColorStop(0, 'rgba(108, 240, 255, 0.6)');
+                progressGradient.addColorStop(1, 'rgba(80, 200, 255, 0.3)');
+                ctx.fillStyle = progressGradient;
+                ctx.fillRect(bx + 2, by + buffSize - 5, (buffWidth - 4) * pct, 3);
+            }
+            
+            // Рамка (пульсирует если бафф скоро кончится)
+            const borderAlpha = pct < 0.3 ? (Math.sin(Date.now() / 100) * 0.3 + 0.7) : 0.6;
+            ctx.strokeStyle = `rgba(108, 240, 255, ${borderAlpha})`;
+            ctx.lineWidth = 1;
+            this.roundRect(ctx, bx, by, buffWidth, buffSize, 4);
+            ctx.stroke();
+            
+            // Иконка стаков
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`x${buff.stacks}`, bx + 6, by + buffSize / 2 - 2);
+            
+            // Название баффа (сокращённое)
+            const buffName = this.getBuffDisplayName(buff.id);
+            ctx.fillStyle = '#b8d4ff';
+            ctx.font = '10px Arial';
+            ctx.fillText(buffName, bx + 28, by + buffSize / 2 - 2);
         }
+    }
+
+    /**
+     * Вспомогательный метод для рисования скруглённых прямоугольников
+     */
+    roundRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+    }
+
+    /**
+     * Получает отображаемое имя баффа
+     */
+    getBuffDisplayName(buffId) {
+        const names = {
+            'arcane_fury': 'Ярость',
+            'burning_soul': 'Пламя',
+            'frost_armor': 'Мороз',
+            'static_charge': 'Заряд',
+            'void_embrace': 'Пустота',
+            'divine_blessing': 'Свет',
+            'arcane_intellect': 'Разум',
+            'stone_skin': 'Камень',
+            'flow_state': 'Поток'
+        };
+        return names[buffId] || buffId.substring(0, 8);
     }
 }

@@ -134,31 +134,73 @@ class MagicProjectile {
         const screenX = this.x - camera.x;
         const screenY = this.y - camera.y;
 
-        // След
+        ctx.save();
+
+        // Внешнее свечение (glow)
+        const glowRadius = this.radius * 2.5;
+        const glowGradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, glowRadius);
+        const c0 = this.trailColors[0] || '#7cf7ff';
+        glowGradient.addColorStop(0, this.hexToRgba(c0, 0.4));
+        glowGradient.addColorStop(0.5, this.hexToRgba(c0, 0.15));
+        glowGradient.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glowGradient;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // След с улучшенным градиентом
         for (let i = 0; i < this.trail.length; i++) {
             const p = this.trail[i];
             const t = i / this.trail.length;
-            const alpha = 0.15 + 0.35 * t;
-            const r = this.radius * (0.35 + 0.65 * t);
-            ctx.fillStyle = this.trailColors[0] || '#7cf7ff';
-            ctx.globalAlpha = alpha;
+            const alpha = 0.1 + 0.5 * t * t; // Квадратичное нарастание
+            const r = this.radius * (0.3 + 0.7 * t);
+            
+            const trailGrad = ctx.createRadialGradient(
+                p.x - camera.x, p.y - camera.y, 0,
+                p.x - camera.x, p.y - camera.y, r
+            );
+            trailGrad.addColorStop(0, this.hexToRgba(c0, alpha));
+            trailGrad.addColorStop(1, this.hexToRgba(c0, 0));
+            ctx.fillStyle = trailGrad;
             ctx.beginPath();
             ctx.arc(p.x - camera.x, p.y - camera.y, r, 0, Math.PI * 2);
             ctx.fill();
         }
-        ctx.globalAlpha = 1;
 
-        // Основное ядро
-        const gradient = ctx.createRadialGradient(screenX, screenY, this.radius * 0.2, screenX, screenY, this.radius);
-        const c0 = this.trailColors[0] || '#ffffff';
-        const c1 = this.trailColors[1] || '#7cf7ff';
+        // Основное ядро с многослойным градиентом
+        const c1 = this.trailColors[1] || '#b9f3ff';
+        const gradient = ctx.createRadialGradient(
+            screenX, screenY, 0,
+            screenX, screenY, this.radius
+        );
         gradient.addColorStop(0, '#ffffff');
-        gradient.addColorStop(0.3, c0);
-        gradient.addColorStop(1, c1);
+        gradient.addColorStop(0.2, '#ffffff');
+        gradient.addColorStop(0.4, c0);
+        gradient.addColorStop(0.8, c1);
+        gradient.addColorStop(1, this.hexToRgba(c1, 0.3));
         ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
         ctx.fill();
+
+        // Яркое ядро
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    /**
+     * Вспомогательная функция для конвертации HEX в RGBA
+     */
+    hexToRgba(hex, alpha) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (result) {
+            return `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${alpha})`;
+        }
+        return `rgba(255, 255, 255, ${alpha})`;
     }
 }
 
@@ -239,20 +281,59 @@ class MagicBeam {
         const sy = this.y - camera.y;
         const ex = sx + this.dirX * this.length;
         const ey = sy + this.dirY * this.length;
+        const fadeProgress = this.age / this.duration;
 
         ctx.save();
-        const grad = ctx.createLinearGradient(sx, sy, ex, ey);
-        grad.addColorStop(0, 'rgba(255,255,255,0.9)');
-        grad.addColorStop(0.4, 'rgba(162,240,255,0.8)');
-        grad.addColorStop(1, 'rgba(124,107,255,0.6)');
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = this.width;
-        ctx.globalAlpha = 0.85;
+
+        // Внешнее свечение (широкое)
+        const glowWidth = this.width * 3;
+        ctx.strokeStyle = `rgba(162, 240, 255, ${0.3 * (1 - fadeProgress)})`;
+        ctx.lineWidth = glowWidth;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(sx, sy);
         ctx.lineTo(ex, ey);
         ctx.stroke();
+
+        // Среднее свечение
+        ctx.strokeStyle = `rgba(200, 250, 255, ${0.5 * (1 - fadeProgress)})`;
+        ctx.lineWidth = this.width * 1.8;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+
+        // Основной луч с градиентом
+        const grad = ctx.createLinearGradient(sx, sy, ex, ey);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${0.95 * (1 - fadeProgress * 0.5)})`);
+        grad.addColorStop(0.3, `rgba(162, 240, 255, ${0.9 * (1 - fadeProgress * 0.5)})`);
+        grad.addColorStop(0.7, `rgba(124, 200, 255, ${0.85 * (1 - fadeProgress * 0.5)})`);
+        grad.addColorStop(1, `rgba(100, 150, 255, ${0.7 * (1 - fadeProgress * 0.5)})`);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = this.width;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+
+        // Яркое ядро (тонкая линия по центру)
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * (1 - fadeProgress)})`;
+        ctx.lineWidth = this.width * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+
+        // Точка начала (вспышка)
+        const startGlow = ctx.createRadialGradient(sx, sy, 0, sx, sy, this.width * 1.5);
+        startGlow.addColorStop(0, `rgba(255, 255, 255, ${0.9 * (1 - fadeProgress)})`);
+        startGlow.addColorStop(0.5, `rgba(162, 240, 255, ${0.5 * (1 - fadeProgress)})`);
+        startGlow.addColorStop(1, 'rgba(162, 240, 255, 0)');
+        ctx.fillStyle = startGlow;
+        ctx.beginPath();
+        ctx.arc(sx, sy, this.width * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.restore();
     }
 }
@@ -312,14 +393,59 @@ class MagicZone {
         if (!this.active) return;
         const sx = this.x - camera.x;
         const sy = this.y - camera.y;
+        const lifePercent = 1 - this.age / this.duration;
+        const pulsePhase = Math.sin(this.age * 8) * 0.15 + 0.85;
+
         ctx.save();
-        const grd = ctx.createRadialGradient(sx, sy, this.radius * 0.2, sx, sy, this.radius);
-        grd.addColorStop(0, 'rgba(194, 246, 255, 0.35)');
+
+        // Внешнее пульсирующее кольцо
+        ctx.strokeStyle = `rgba(194, 246, 255, ${0.3 * lifePercent * pulsePhase})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(sx, sy, this.radius * pulsePhase, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Вторичное кольцо (меньше)
+        ctx.strokeStyle = `rgba(150, 220, 255, ${0.4 * lifePercent})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, this.radius * 0.7, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Основной градиент зоны
+        const grd = ctx.createRadialGradient(sx, sy, 0, sx, sy, this.radius);
+        grd.addColorStop(0, `rgba(220, 250, 255, ${0.45 * lifePercent})`);
+        grd.addColorStop(0.3, `rgba(194, 246, 255, ${0.35 * lifePercent * pulsePhase})`);
+        grd.addColorStop(0.6, `rgba(150, 220, 255, ${0.2 * lifePercent})`);
         grd.addColorStop(1, 'rgba(107, 170, 255, 0)');
         ctx.fillStyle = grd;
         ctx.beginPath();
         ctx.arc(sx, sy, this.radius, 0, Math.PI * 2);
         ctx.fill();
+
+        // Анимированные внутренние круги (волны)
+        const waveCount = 3;
+        for (let i = 0; i < waveCount; i++) {
+            const wavePhase = ((this.age * 2 + i / waveCount) % 1);
+            const waveRadius = this.radius * wavePhase;
+            const waveAlpha = (1 - wavePhase) * 0.3 * lifePercent;
+            
+            ctx.strokeStyle = `rgba(200, 240, 255, ${waveAlpha})`;
+            ctx.lineWidth = 2 * (1 - wavePhase);
+            ctx.beginPath();
+            ctx.arc(sx, sy, waveRadius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Центральная точка
+        const centerGrd = ctx.createRadialGradient(sx, sy, 0, sx, sy, 15);
+        centerGrd.addColorStop(0, `rgba(255, 255, 255, ${0.6 * lifePercent})`);
+        centerGrd.addColorStop(1, 'rgba(194, 246, 255, 0)');
+        ctx.fillStyle = centerGrd;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 15, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.restore();
     }
 }

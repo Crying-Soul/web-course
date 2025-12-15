@@ -3,7 +3,7 @@
  * Наследуется от Entity, добавляет ИИ и атаку
  */
 class Enemy extends Entity {
-    // Базовый конфиг спрайта для врагов (можно переопределять по типу/спавнеру)
+    // Базовый конфиг спрайта для врагов
     static baseEnemySpriteConfig = {
         imagePath: 'images/npc/FuryPlayer.png',
         frameWidth: 40,
@@ -15,171 +15,67 @@ class Enemy extends Entity {
         framesPerRow: 1,
         smooth: false,
         animations: {
-            idle: {
-                frames: [0],
-                speed: 0.2,
-                loop: true
-            },
-            walk: {
-                frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-                speed: 0.08,
-                loop: true
-            },
-            attack: {
-                frames: [19, 20, 21, 22],
-                speed: 0.1,
-                loop: false
-            }
+            idle: { frames: [0], speed: 0.2, loop: true },
+            walk: { frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], speed: 0.08, loop: true },
+            attack: { frames: [19, 20, 21, 22], speed: 0.1, loop: false }
         }
     };
 
-    // Базовые пресеты врагов (можно расширять через registerEnemyType)
+    // Фабричный метод для создания анимаций врага
+    static createEnemyAnimations(walkFrameCount = 3, attackFrameCount = 3) {
+        return {
+            idle: { frames: [0], speed: 0.3, loop: true },
+            walk: { frames: Array.from({ length: walkFrameCount }, (_, i) => i), speed: 0.1, loop: true },
+            attack: { frames: Array.from({ length: attackFrameCount }, (_, i) => i), speed: 0.15, loop: false }
+        };
+    }
+
+    // Базовые пресеты врагов (упрощённые определения)
     static defaultEnemyPresets = {
-        g1: {
-            name: 'Призрак',
-            health: 35,
-            damage: 18,
-            moveSpeed: 100,
-            detectionRange: 400,
-            attackRange: 25,
-            attackCooldown: 0.8,
-            scoreValue: 30,
-            dropChance: 0.25,
-            spritePath: 'images/npc/g1.png',
-            spriteConfig: Enemy.makeSpriteConfig('images/npc/g1.png', {
-                frameWidth: 26,
-                frameHeight: 49,
-                framesPerRow: 1,
-                spacingY: 1,
-                animations: {
-                    idle: {
-                        frames: [0],
-                        speed: 0.3,
-                        loop: true
-                    },
-                    walk: {
-                        frames: [0, 1, 2],
-                        speed: 0.1,
-                        loop: true
-                    },
-                    attack: {
-                        frames: [0, 1, 2],
-                        speed: 0.15,
-                        loop: false
-                    }
-                }
-            })
-
-        
-        },
-        z1: {
-            name: 'Z1',
-            health: 50,
-            damage: 12,
-            moveSpeed: 55,
-            detectionRange: 220,
-            attackRange: 32,
-            attackCooldown: 1.0,
-            scoreValue: 15,
-            dropChance: 0.16,
-            spritePath: 'images/npc/z1.png',
-            spriteConfig: Enemy.makeSpriteConfig('images/npc/z1.png', {
-                frameWidth: 34,
-                frameHeight: 41,
-                framesPerRow: 1,
-                spacingY: 1,
-                animations: {
-                    idle: {
-                        frames: [0],
-                        speed: 0.3,
-                        loop: true
-                    },
-                    walk: {
-                        frames: [0, 1, 2],
-                        speed: 0.1,
-                        loop: true
-                    },
-                    attack: {
-                        frames: [0, 1, 2],
-                        speed: 0.15,
-                        loop: false
-                    }
-                }
-            })
-        },
-        z2: {
-            name: 'Z2',
-            health: 80,
-            damage: 18,
-            moveSpeed: 65,
-            detectionRange: 260,
-            attackRange: 36,
-            attackCooldown: 1.1,
-            scoreValue: 28,
-            dropChance: 0.2,
-            spritePath: 'images/npc/z2.png',
-            spriteConfig: Enemy.makeSpriteConfig('images/npc/z2.png', {
-                frameWidth: 34,
-                frameHeight: 51,
-                framesPerRow: 1,
-                spacingY: 1,
-                animations: {
-                    idle: {
-                        frames: [0],
-                        speed: 0.3,
-                        loop: true
-                    },
-                    walk: {
-                        frames: [0, 1, 2],
-                        speed: 0.1,
-                        loop: true
-                    },
-                    attack: {
-                        frames: [0, 1, 2],
-                        speed: 0.15,
-                        loop: false
-                    }
-                }
-            })
-
-        },
-        z3: {
-            name: 'Z3',
-            health: 120,
-            damage: 26,
-            moveSpeed: 70,
-            detectionRange: 320,
-            attackRange: 42,
-            attackCooldown: 1.2,
-            scoreValue: 40,
-            dropChance: 0.22,
-            spritePath: 'images/npc/z3.png',
-            spriteConfig: Enemy.makeSpriteConfig('images/npc/z3.png', {
-                frameWidth: 34,
-                frameHeight: 53,
-                framesPerRow: 1,
-                spacingY: 1,
-                animations: {
-                    idle: {
-                        frames: [0],
-                        speed: 0.3,
-                        loop: true
-                    },
-                    walk: {
-                        frames: [0, 1, 2],
-                        speed: 0.1,
-                        loop: true
-                    },
-                    attack: {
-                        frames: [0, 1, 2],
-                        speed: 0.15,
-                        loop: false
-                    }
-                }
-            })
-
-        }
+        g1: Enemy.createPreset('Призрак', {
+            health: 35, damage: 18, moveSpeed: 100,
+            detectionRange: 400, attackRange: 25, attackCooldown: 0.8,
+            scoreValue: 30, dropChance: 0.25,
+            sprite: { path: 'images/npc/g1.png', width: 26, height: 49 }
+        }),
+        z1: Enemy.createPreset('Зомби', {
+            health: 50, damage: 12, moveSpeed: 55,
+            detectionRange: 220, attackRange: 32, attackCooldown: 1.0,
+            scoreValue: 15, dropChance: 0.16,
+            sprite: { path: 'images/npc/z1.png', width: 34, height: 41 }
+        }),
+        z2: Enemy.createPreset('Зомби-воин', {
+            health: 80, damage: 18, moveSpeed: 65,
+            detectionRange: 260, attackRange: 36, attackCooldown: 1.1,
+            scoreValue: 28, dropChance: 0.2,
+            sprite: { path: 'images/npc/z2.png', width: 34, height: 51 }
+        }),
+        z3: Enemy.createPreset('Зомби-громила', {
+            health: 120, damage: 26, moveSpeed: 70,
+            detectionRange: 320, attackRange: 42, attackCooldown: 1.2,
+            scoreValue: 40, dropChance: 0.22,
+            sprite: { path: 'images/npc/z3.png', width: 34, height: 53 }
+        })
     };
+
+    /**
+     * Фабричный метод для создания пресета врага
+     */
+    static createPreset(name, config) {
+        const { sprite, ...stats } = config;
+        return {
+            name,
+            ...stats,
+            spritePath: sprite.path,
+            spriteConfig: Enemy.makeSpriteConfig(sprite.path, {
+                frameWidth: sprite.width,
+                frameHeight: sprite.height,
+                framesPerRow: 1,
+                spacingY: 1,
+                animations: Enemy.createEnemyAnimations()
+            })
+        };
+    }
 
     // Вспомогательные статические методы
     static cloneAnimations(animations = {}) {
@@ -508,29 +404,59 @@ class Enemy extends Entity {
     }
 
     /**
-     * Отрисовка полоски здоровья
+     * Отрисовка полоски здоровья с улучшенными эффектами
      * @param {CanvasRenderingContext2D} ctx
      * @param {Camera} camera
      */
     renderHealthBar(ctx, camera) {
-        const barWidth = 30;
-        const barHeight = 4;
+        const barWidth = 32;
+        const barHeight = 5;
         const screenX = Math.floor(this.x - camera.x) + (this.displayWidth - barWidth) / 2;
-        const screenY = Math.floor(this.y - camera.y) - 8;
+        const screenY = Math.floor(this.y - camera.y) - 10;
+        const hpPercent = this.health / this.maxHealth;
+
+        ctx.save();
+
+        // Тень под баром
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(screenX + 1, screenY + 1, barWidth, barHeight);
 
         // Фон
-        ctx.fillStyle = '#333333';
+        ctx.fillStyle = 'rgba(40, 40, 40, 0.9)';
         ctx.fillRect(screenX, screenY, barWidth, barHeight);
 
-        // HP
-        const hpPercent = this.health / this.maxHealth;
-        const hpColor = hpPercent > 0.5 ? '#00ff00' : hpPercent > 0.25 ? '#ffff00' : '#ff0000';
-        ctx.fillStyle = hpColor;
-        ctx.fillRect(screenX, screenY, barWidth * hpPercent, barHeight);
+        // HP градиент в зависимости от здоровья
+        if (hpPercent > 0) {
+            const hpGradient = ctx.createLinearGradient(screenX, screenY, screenX, screenY + barHeight);
+            if (hpPercent > 0.5) {
+                hpGradient.addColorStop(0, '#66ff66');
+                hpGradient.addColorStop(1, '#00cc00');
+            } else if (hpPercent > 0.25) {
+                hpGradient.addColorStop(0, '#ffff66');
+                hpGradient.addColorStop(1, '#ffaa00');
+            } else {
+                hpGradient.addColorStop(0, '#ff6666');
+                hpGradient.addColorStop(1, '#cc0000');
+            }
+            ctx.fillStyle = hpGradient;
+            ctx.fillRect(screenX, screenY, barWidth * hpPercent, barHeight);
+
+            // Блик сверху
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(screenX, screenY, barWidth * hpPercent, barHeight / 2);
+        }
 
         // Рамка
-        ctx.strokeStyle = '#000000';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
         ctx.lineWidth = 1;
         ctx.strokeRect(screenX, screenY, barWidth, barHeight);
+
+        // Эффект урона - мерцание
+        if (this.isDamaged) {
+            ctx.fillStyle = `rgba(255, 0, 0, ${0.3 * (this.damageFlashTimer / this.damageFlashDuration)})`;
+            ctx.fillRect(screenX - 2, screenY - 2, barWidth + 4, barHeight + 4);
+        }
+
+        ctx.restore();
     }
 }

@@ -89,48 +89,69 @@ class Inventory {
     }
 
     /**
-     * Отрисовка инвентаря (UI)
+     * Отрисовка инвентаря (UI) с улучшенным дизайном
      * @param {CanvasRenderingContext2D} ctx
      */
     render(ctx) {
-        const slotSize = 32;
-        const padding = 4;
-        const startX = 10;
+        const slotSize = 36;
+        const padding = 5;
+        const startX = 12;
         const totalHeight = this.maxSlots * slotSize + (this.maxSlots - 1) * padding;
-        const startY = Math.max(10, ctx.canvas.height - totalHeight - 10);
+        const startY = Math.max(10, ctx.canvas.height - totalHeight - 12);
+        const cornerRadius = 4;
+        
+        ctx.save();
         
         for (let i = 0; i < this.maxSlots; i++) {
             const x = startX;
             const y = startY + i * (slotSize + padding);
+            const isSelected = i === this.selectedSlot;
+            const item = this.slots[i];
             
-            // Фон слота
-            ctx.fillStyle = i === this.selectedSlot ? 'rgba(255, 255, 100, 0.5)' : 'rgba(0, 0, 0, 0.6)';
-            ctx.fillRect(x, y, slotSize, slotSize);
+            // Тень слота
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            this.roundRect(ctx, x + 2, y + 2, slotSize, slotSize, cornerRadius);
+            ctx.fill();
             
-            // Рамка
-            ctx.strokeStyle = i === this.selectedSlot ? '#ffff00' : '#555555';
-            ctx.lineWidth = i === this.selectedSlot ? 2 : 1;
-            ctx.strokeRect(x, y, slotSize, slotSize);
+            // Фон слота с градиентом
+            const bgGradient = ctx.createLinearGradient(x, y, x, y + slotSize);
+            if (isSelected) {
+                bgGradient.addColorStop(0, 'rgba(100, 100, 50, 0.9)');
+                bgGradient.addColorStop(1, 'rgba(60, 60, 30, 0.9)');
+            } else {
+                bgGradient.addColorStop(0, 'rgba(40, 45, 60, 0.85)');
+                bgGradient.addColorStop(1, 'rgba(25, 30, 40, 0.85)');
+            }
+            ctx.fillStyle = bgGradient;
+            this.roundRect(ctx, x, y, slotSize, slotSize, cornerRadius);
+            ctx.fill();
+            
+            // Внутреннее свечение для выбранного слота
+            if (isSelected) {
+                const glowGradient = ctx.createRadialGradient(
+                    x + slotSize / 2, y + slotSize / 2, 0,
+                    x + slotSize / 2, y + slotSize / 2, slotSize
+                );
+                glowGradient.addColorStop(0, 'rgba(255, 255, 100, 0.2)');
+                glowGradient.addColorStop(1, 'rgba(255, 255, 100, 0)');
+                ctx.fillStyle = glowGradient;
+                this.roundRect(ctx, x, y, slotSize, slotSize, cornerRadius);
+                ctx.fill();
+            }
             
             // Предмет
-            const item = this.slots[i];
             if (item) {
                 const prevSmoothing = ctx.imageSmoothingEnabled;
                 const prevQuality = ctx.imageSmoothingQuality || 'low';
+                
                 if (item.imageLoaded) {
-                // Временная настройка сглаживания для предмета
                     try {
-                        if (item.pixelPerfect) {
-                            ctx.imageSmoothingEnabled = false;
-                        } else {
-                            ctx.imageSmoothingEnabled = !!item.smooth;
-                            if (item.smooth) ctx.imageSmoothingQuality = 'high';
-                        }
+                        ctx.imageSmoothingEnabled = !item.pixelPerfect;
+                        if (!item.pixelPerfect && item.smooth) ctx.imageSmoothingQuality = 'high';
                     } catch (e) {}
 
-                    // Подгоняем изображение под слот сохраняя пропорции — центрируем
-                    const targetW = slotSize - 8;
-                    const targetH = slotSize - 8;
+                    const targetW = slotSize - 10;
+                    const targetH = slotSize - 10;
                     const scale = Math.min(targetW / item.width, targetH / item.height, 1);
                     const drawW = Math.round(item.width * scale);
                     const drawH = Math.round(item.height * scale);
@@ -138,36 +159,55 @@ class Inventory {
                     const drawY = Math.round(y + (slotSize - drawH) / 2);
                     ctx.drawImage(item.image, drawX, drawY, drawW, drawH);
                 } else {
-                    // Если нет изображения — рисуем стилизованную магическую плашку
-                    const cx = Math.round(x + slotSize / 2);
-                    const cy = Math.round(y + slotSize / 2);
-                    const r = (slotSize - 10) / 2;
-                    const gradient = ctx.createRadialGradient(cx, cy, 4, cx, cy, r);
+                    // Магическая иконка с улучшенным свечением
+                    const cx = x + slotSize / 2;
+                    const cy = y + slotSize / 2;
+                    const r = (slotSize - 12) / 2;
                     const color = item.iconColor || '#7cf7ff';
-                    gradient.addColorStop(0, '#ffffff');
-                    gradient.addColorStop(0.35, color);
-                    gradient.addColorStop(1, 'rgba(0,0,0,0.2)');
-                    ctx.fillStyle = gradient;
+                    
+                    // Внешнее свечение
+                    const glowGrad = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 1.5);
+                    glowGrad.addColorStop(0, color);
+                    glowGrad.addColorStop(0.5, this.hexToRgba(color, 0.3));
+                    glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    ctx.fillStyle = glowGrad;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r * 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Основной орб
+                    const orbGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+                    orbGrad.addColorStop(0, '#ffffff');
+                    orbGrad.addColorStop(0.3, color);
+                    orbGrad.addColorStop(1, this.hexToRgba(color, 0.5));
+                    ctx.fillStyle = orbGrad;
                     ctx.beginPath();
                     ctx.arc(cx, cy, r, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-                    ctx.stroke();
                 }
 
-                // Восстанавливаем сглаживание
                 try {
                     ctx.imageSmoothingEnabled = prevSmoothing;
                     ctx.imageSmoothingQuality = prevQuality;
                 } catch (e) {}
             }
             
-            // Номер слота
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '10px Arial';
+            // Рамка слота
+            ctx.strokeStyle = isSelected ? 'rgba(255, 220, 100, 0.9)' : 'rgba(100, 110, 130, 0.6)';
+            ctx.lineWidth = isSelected ? 2 : 1;
+            this.roundRect(ctx, x, y, slotSize, slotSize, cornerRadius);
+            ctx.stroke();
+            
+            // Номер слота с тенью
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'left';
-            ctx.fillText((i + 1).toString(), x + 2, y + 10);
+            ctx.fillText((i + 1).toString(), x + 4, y + 12);
+            ctx.fillStyle = isSelected ? '#ffee88' : '#aabbcc';
+            ctx.fillText((i + 1).toString(), x + 3, y + 11);
         }
+        
+        ctx.restore();
 
         // Панель характеристик выбранного заклинания
         const selected = this.getSelectedItem();
@@ -210,5 +250,33 @@ class Inventory {
             ctx.font = '11px Arial';
             ctx.fillText('Пустой слот — подберите заклинание', panelX + 8, panelY + 32);
         }
+    }
+
+    /**
+     * Вспомогательный метод для рисования скруглённых прямоугольников
+     */
+    roundRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+    }
+
+    /**
+     * Конвертация HEX в RGBA
+     */
+    hexToRgba(hex, alpha) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (result) {
+            return `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${alpha})`;
+        }
+        return `rgba(255, 255, 255, ${alpha})`;
     }
 }

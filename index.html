@@ -39,11 +39,26 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: white;
+            color: #7cf7ff;
             font-family: 'Segoe UI', Arial, sans-serif;
-            font-size: 24px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-            animation: pulse 1.5s ease-in-out infinite;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-shadow: 
+                0 0 20px rgba(124, 247, 255, 0.5),
+                0 0 40px rgba(124, 247, 255, 0.3);
+            animation: loadingPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loadingPulse {
+            0%, 100% { 
+                opacity: 1;
+                text-shadow: 0 0 20px rgba(124, 247, 255, 0.5), 0 0 40px rgba(124, 247, 255, 0.3);
+            }
+            50% { 
+                opacity: 0.6;
+                text-shadow: 0 0 30px rgba(124, 247, 255, 0.7), 0 0 60px rgba(124, 247, 255, 0.4);
+            }
         }
 
         #ui-layer {
@@ -58,22 +73,44 @@
         .card {
             min-width: 360px;
             max-width: 440px;
-            padding: 18px 20px;
-            border-radius: 12px;
-            background: rgba(10, 12, 24, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            padding: 24px 28px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(15, 20, 40, 0.95), rgba(8, 12, 28, 0.98));
+            border: 1px solid rgba(100, 180, 255, 0.15);
+            box-shadow: 
+                0 15px 40px rgba(0, 0, 0, 0.6),
+                0 0 60px rgba(80, 150, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
             font-family: 'Segoe UI', Arial, sans-serif;
             color: #e8f0ff;
             pointer-events: auto;
+            animation: cardAppear 0.4s ease-out;
+            backdrop-filter: blur(10px);
+        }
+        
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
         }
 
         .hidden { display: none; }
 
         .card h1 {
-            font-size: 22px;
-            margin-bottom: 12px;
-            letter-spacing: 0.5px;
+            font-size: 26px;
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #7cf7ff, #b8a4ff, #ff9cf7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(124, 247, 255, 0.3);
         }
 
         .card label {
@@ -85,40 +122,74 @@
 
         .card input[type="text"] {
             width: 100%;
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            background: rgba(255, 255, 255, 0.04);
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(100, 180, 255, 0.2);
+            background: linear-gradient(135deg, rgba(20, 30, 60, 0.8), rgba(15, 20, 45, 0.9));
             color: #e8f0ff;
             outline: none;
-            font-size: 14px;
+            font-size: 15px;
+            transition: all 0.25s ease;
         }
 
         .card input[type="text"]:focus {
-            border-color: #56c2ff;
-            box-shadow: 0 0 0 2px rgba(86, 194, 255, 0.25);
+            border-color: #7cf7ff;
+            box-shadow: 
+                0 0 0 3px rgba(124, 247, 255, 0.15),
+                0 0 20px rgba(124, 247, 255, 0.1);
+            background: linear-gradient(135deg, rgba(25, 35, 70, 0.9), rgba(20, 25, 55, 0.95));
+        }
+
+        .card input[type="text"]::placeholder {
+            color: rgba(167, 184, 216, 0.5);
         }
 
         .card button {
-            margin-top: 14px;
+            margin-top: 18px;
             width: 100%;
-            padding: 10px 14px;
+            padding: 14px 18px;
             border: none;
-            border-radius: 10px;
-            background: linear-gradient(90deg, #4bc8ff, #7c6bff);
-            color: #0a0a15;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #4bc8ff, #7c6bff, #b64bff);
+            background-size: 200% 200%;
+            color: #ffffff;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            font-size: 15px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             cursor: pointer;
-            transition: transform 0.12s ease, box-shadow 0.12s ease;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 15px rgba(75, 200, 255, 0.3);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
         }
 
         .card button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 18px rgba(75, 200, 255, 0.25);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(75, 200, 255, 0.4);
+            background-position: 100% 0;
         }
 
-        .card button:active { transform: translateY(0); }
+        .card button:hover::before {
+            left: 100%;
+        }
+
+        .card button:active { 
+            transform: translateY(0);
+            box-shadow: 0 4px 12px rgba(75, 200, 255, 0.3);
+        }
 
         .meta-row {
             display: flex;
@@ -129,43 +200,103 @@
 
         .meta {
             flex: 1;
-            padding: 10px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.07);
+            padding: 14px 12px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(60, 100, 180, 0.15), rgba(40, 60, 120, 0.1));
+            border: 1px solid rgba(100, 180, 255, 0.12);
             text-align: center;
+            transition: all 0.2s ease;
         }
 
-        .meta strong { display: block; font-size: 16px; }
-        .meta span { color: #a7b8d8; font-size: 12px; }
+        .meta:hover {
+            background: linear-gradient(135deg, rgba(60, 100, 180, 0.25), rgba(40, 60, 120, 0.2));
+            border-color: rgba(100, 180, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .meta strong { 
+            display: block; 
+            font-size: 20px;
+            color: #7cf7ff;
+            text-shadow: 0 0 10px rgba(124, 247, 255, 0.4);
+        }
+        .meta span { color: #a7b8d8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         #leaderboard {
-            margin-top: 14px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            padding-top: 12px;
+            margin-top: 18px;
+            border-top: 1px solid rgba(100, 180, 255, 0.1);
+            padding-top: 16px;
         }
 
         #leaderboard h2 {
-            font-size: 16px;
-            margin-bottom: 8px;
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: #a7b8d8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         #leaderboard ul {
             list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #leaderboard ul::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #leaderboard ul::-webkit-scrollbar-track {
+            background: rgba(40, 60, 100, 0.2);
+            border-radius: 2px;
+        }
+
+        #leaderboard ul::-webkit-scrollbar-thumb {
+            background: rgba(100, 180, 255, 0.3);
+            border-radius: 2px;
         }
 
         #leaderboard li {
             display: flex;
             justify-content: space-between;
-            padding: 6px 0;
+            align-items: center;
+            padding: 10px 12px;
+            margin: 4px 0;
             color: #cfd9f5;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            background: rgba(40, 60, 100, 0.1);
+            border: 1px solid rgba(100, 150, 255, 0.05);
             font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        #leaderboard li:hover {
+            background: rgba(60, 100, 180, 0.15);
+            border-color: rgba(100, 180, 255, 0.15);
+        }
+
+        #leaderboard li:first-child {
+            background: linear-gradient(90deg, rgba(255, 215, 0, 0.15), rgba(255, 180, 0, 0.05));
+            border-color: rgba(255, 215, 0, 0.2);
+        }
+
+        #leaderboard li:first-child strong {
+            color: #ffd700;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
         }
 
         #leaderboard li strong { color: #ffffff; }
 
-        #tips { color: #94a4c2; font-size: 12px; margin-top: 8px; line-height: 1.4; }
+        #tips { 
+            color: #8ca0c4; 
+            font-size: 11px; 
+            margin-top: 12px; 
+            padding: 12px;
+            line-height: 1.5;
+            background: rgba(40, 60, 100, 0.15);
+            border-radius: 8px;
+            border-left: 3px solid rgba(124, 247, 255, 0.4);
+        }
         
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -211,10 +342,14 @@
             </div>
         </div>
     </div>
+    <!-- Конфигурация -->
+    <script src="js/Config.js"></script>
+    
     <!-- Менеджеры -->
     <script src="js/EventManager.js"></script>
     <script src="js/SoundManager.js"></script>
     <script src="js/SpriteManager.js"></script>
+    <script src="js/ParticleSystem.js"></script>
     <script src="js/MapManager.js"></script>
     <script src="js/PhysicsManager.js"></script>
     <script src="js/GameManager.js"></script>

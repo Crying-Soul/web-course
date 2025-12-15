@@ -158,46 +158,111 @@ class Teleport {
         
         const screenX = this.x - camera.x;
         const screenY = this.y - camera.y;
+        const centerX = screenX + this.width / 2;
+        const centerY = screenY + this.height / 2;
         
         // Портальное свечение
         const pulse = Math.sin(this.animTimer * 3) * 0.3 + 0.7;
+        const rotationAngle = this.animTimer * 0.5;
         
-        // Фон портала
-        const gradient = ctx.createLinearGradient(
-            screenX, screenY,
-            screenX, screenY + this.height
+        ctx.save();
+
+        // Внешнее свечение
+        const outerGlow = ctx.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, Math.max(this.width, this.height)
         );
-        gradient.addColorStop(0, `rgba(128, 0, 255, ${0.2 * pulse})`);
-        gradient.addColorStop(0.5, `rgba(180, 100, 255, ${0.4 * pulse})`);
-        gradient.addColorStop(1, `rgba(128, 0, 255, ${0.2 * pulse})`);
+        outerGlow.addColorStop(0, `rgba(180, 100, 255, ${0.3 * pulse})`);
+        outerGlow.addColorStop(0.5, `rgba(128, 50, 200, ${0.15 * pulse})`);
+        outerGlow.addColorStop(1, 'rgba(100, 0, 180, 0)');
+        ctx.fillStyle = outerGlow;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, this.width * 0.8, this.height * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Вращающиеся кольца
+        ctx.translate(centerX, centerY);
+        
+        for (let ring = 0; ring < 3; ring++) {
+            ctx.save();
+            ctx.rotate(rotationAngle * (ring % 2 === 0 ? 1 : -1) + ring * Math.PI / 3);
+            
+            const ringAlpha = 0.4 - ring * 0.1;
+            const ringScale = 0.9 - ring * 0.15;
+            
+            ctx.strokeStyle = `rgba(200, 150, 255, ${ringAlpha * pulse})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, this.width * 0.4 * ringScale, this.height * 0.35 * ringScale, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+        
+        ctx.translate(-centerX, -centerY);
+
+        // Основной портал с градиентом
+        const gradient = ctx.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, Math.min(this.width, this.height) * 0.5
+        );
+        gradient.addColorStop(0, `rgba(50, 0, 100, ${0.9 * pulse})`);
+        gradient.addColorStop(0.3, `rgba(100, 50, 180, ${0.7 * pulse})`);
+        gradient.addColorStop(0.7, `rgba(150, 100, 220, ${0.5 * pulse})`);
+        gradient.addColorStop(1, `rgba(180, 130, 255, ${0.3 * pulse})`);
         
         ctx.fillStyle = gradient;
-        ctx.fillRect(screenX, screenY, this.width, this.height);
-        
-        // Рамка
-        ctx.strokeStyle = `rgba(200, 150, 255, ${pulse})`;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(screenX, screenY, this.width, this.height);
-        
-        // Частицы
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, this.width * 0.4, this.height * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Яркое ядро
+        const coreGlow = ctx.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, 15
+        );
+        coreGlow.addColorStop(0, `rgba(255, 255, 255, ${0.8 * pulse})`);
+        coreGlow.addColorStop(0.5, `rgba(220, 180, 255, ${0.5 * pulse})`);
+        coreGlow.addColorStop(1, 'rgba(180, 130, 255, 0)');
+        ctx.fillStyle = coreGlow;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Частицы с улучшенным эффектом
         for (const p of this.particles) {
             const px = p.x - camera.x;
             const py = p.y - camera.y;
-            ctx.fillStyle = `rgba(200, 150, 255, ${p.life * 0.8})`;
+            
+            const particleGrad = ctx.createRadialGradient(px, py, 0, px, py, p.size * p.life);
+            particleGrad.addColorStop(0, `rgba(255, 220, 255, ${p.life * 0.9})`);
+            particleGrad.addColorStop(0.5, `rgba(200, 150, 255, ${p.life * 0.6})`);
+            particleGrad.addColorStop(1, 'rgba(150, 100, 200, 0)');
+            ctx.fillStyle = particleGrad;
             ctx.beginPath();
-            ctx.arc(px, py, p.size * p.life, 0, Math.PI * 2);
+            ctx.arc(px, py, p.size * p.life * 1.5, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        ctx.restore();
         
         // Подсказка если игрок рядом
         if (this.playerInside && this.requiresInteraction) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(screenX - 10, screenY - 30, this.width + 20, 24);
+            ctx.save();
+            const hintPulse = Math.sin(this.animTimer * 5) * 0.1 + 0.9;
             
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '12px Arial';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            const hintWidth = 100;
+            const hintX = centerX - hintWidth / 2;
+            ctx.fillRect(hintX, screenY - 35, hintWidth, 26);
+            
+            ctx.strokeStyle = `rgba(200, 150, 255, ${hintPulse})`;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(hintX, screenY - 35, hintWidth, 26);
+            
+            ctx.fillStyle = `rgba(255, 255, 255, ${hintPulse})`;
+            ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('[F] Телепорт', screenX + this.width / 2, screenY - 12);
+            ctx.fillText('[F] Телепорт', centerX, screenY - 17);
         }
     }
 
